@@ -155,26 +155,40 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
         z_min = settings.get('z_min', 0)
         z_max = settings.get('z_max', 1)
 
-    colorscale = settings.get('colorscale', 'Turbo')
-    if settings.get('reverse_colorscale', False):
-        colorscale = colorscale + '_r'
+    colorscale_name = settings.get('colorscale', 'Turbo')
+    reverse_colorscale = settings.get('reverse_colorscale', False)
 
     # Create discrete colorscale if enabled
+    import plotly.colors as pc
     if settings.get('discrete_colors', True):
-        import plotly.colors as pc
         n_steps = settings.get('discrete_steps', 10)
         try:
+            # Sample the colorscale at n_steps points
+            sample_points = [(i + 0.5) / n_steps for i in range(n_steps)]
+            if reverse_colorscale:
+                sample_points = sample_points[::-1]
+            colors = pc.sample_colorscale(colorscale_name, sample_points)
+
             discrete_colorscale = []
             for i in range(n_steps):
                 low = i / n_steps
                 high = (i + 1) / n_steps
-                mid = (low + high) / 2
-                color = pc.sample_colorscale(colorscale, [mid])[0]
-                discrete_colorscale.append([low, color])
-                discrete_colorscale.append([high, color])
+                discrete_colorscale.append([low, colors[i]])
+                discrete_colorscale.append([high, colors[i]])
             colorscale = discrete_colorscale
         except Exception:
-            pass
+            colorscale = colorscale_name + '_r' if reverse_colorscale else colorscale_name
+    else:
+        # For continuous colorscale, use _r suffix or reverse manually
+        try:
+            if reverse_colorscale:
+                # Get colorscale and reverse it
+                colors = pc.get_colorscale(colorscale_name)
+                colorscale = [[1 - pos, color] for pos, color in colors][::-1]
+            else:
+                colorscale = colorscale_name
+        except Exception:
+            colorscale = colorscale_name + '_r' if reverse_colorscale else colorscale_name
 
     # Build colorbar dict with all settings
     cb_title_side = settings.get('colorbar_title_side', 'right')
