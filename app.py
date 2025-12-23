@@ -778,7 +778,7 @@ def render_plot_settings():
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.slider("Axis width", 1, 5, key='ps_axis_line_width', help="Line width of triangle axes")
+        st.slider("Axis width", 1, 5, value=st.session_state.get('ps_axis_line_width', 2), key='ps_axis_line_width', help="Line width of triangle axes")
     with c2:
         st.checkbox("Grid", key='ps_show_grid', help="Show grid lines inside triangle")
     with c3:
@@ -791,7 +791,7 @@ def render_plot_settings():
         with c1:
             st.color_picker("Grid color", key='ps_grid_color', help="Color of grid lines")
         with c2:
-            st.slider("Grid width", 1, 5, key='ps_grid_line_width', help="Line width of grid")
+            st.slider("Grid width", 1, 5, value=st.session_state.get('ps_grid_line_width', 1), key='ps_grid_line_width', help="Line width of grid")
         with c3:
             tick_options = [0.05, 0.1, 0.2, 0.25, 0.5]
             st.selectbox("Tick step", tick_options, key='ps_tick_step', help="Spacing between grid lines")
@@ -815,13 +815,13 @@ def render_plot_settings():
     symbols = ['circle', 'square', 'diamond', 'triangle-up', 'hexagon', 'star']
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.slider("Marker size", 2, 30, key='ps_marker_size', help="Size of data point markers")
+        st.slider("Marker size", 2, 30, value=st.session_state.get('ps_marker_size', 8), key='ps_marker_size', help="Size of data point markers")
     with c2:
         st.selectbox("Symbol", symbols, key='ps_marker_symbol', help="Shape of data point markers")
     with c3:
-        st.slider("Edge width", 0, 5, key='ps_marker_line_width', help="Width of marker edge/outline")
+        st.slider("Edge width", 0, 5, value=st.session_state.get('ps_marker_line_width', 1), key='ps_marker_line_width', help="Width of marker edge/outline")
     with c4:
-        st.slider("Opacity", 0.0, 1.0, step=0.1, key='ps_marker_opacity', help="Transparency of markers (1.0 = opaque)")
+        st.slider("Opacity", 0.0, 1.0, value=st.session_state.get('ps_marker_opacity', 0.8), step=0.1, key='ps_marker_opacity', help="Transparency of markers (1.0 = opaque)")
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -872,9 +872,9 @@ def render_plot_settings():
     if st.session_state.ps_show_colorbar:
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.slider("CB length", 0.2, 1.0, step=0.1, key='ps_colorbar_len', help="Length of colorbar (fraction of plot)")
+            st.slider("CB length", 0.2, 1.0, value=st.session_state.get('ps_colorbar_len', 0.6), step=0.1, key='ps_colorbar_len', help="Length of colorbar (fraction of plot)")
         with c2:
-            st.slider("CB thickness", 10, 40, key='ps_colorbar_thickness', help="Thickness of colorbar in pixels")
+            st.slider("CB thickness", 10, 40, value=st.session_state.get('ps_colorbar_thickness', 20), key='ps_colorbar_thickness', help="Thickness of colorbar in pixels")
         with c3:
             st.checkbox("CB ticks", key='ps_colorbar_ticks', help="Show tick marks on colorbar")
         with c4:
@@ -892,7 +892,7 @@ def render_plot_settings():
     if st.session_state.get('ps_discrete_colors', False):
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.slider("Color steps", 2, 20, key='ps_discrete_steps', help="Number of discrete color bands")
+            st.slider("Color steps", 2, 20, value=st.session_state.get('ps_discrete_steps', 10), key='ps_discrete_steps', help="Number of discrete color bands")
 
     st.markdown("---")
 
@@ -908,7 +908,7 @@ def render_plot_settings():
 
     if st.session_state.ps_heatmap_enabled:
         with c2:
-            st.slider("Resolution", 10, 100, key='ps_heatmap_resolution', help="Number of grid points for interpolation (higher = smoother)")
+            st.slider("Resolution", 10, 100, value=st.session_state.get('ps_heatmap_resolution', 100), key='ps_heatmap_resolution', help="Number of grid points for interpolation (higher = smoother)")
         with c3:
             method_help = "\n".join([f"**{m}**: {INTERPOLATION_METHODS[m]}" for m in methods])
             st.selectbox("Method", methods, key='ps_heatmap_method', help=method_help)
@@ -921,9 +921,9 @@ def render_plot_settings():
         # Heatmap-specific marker settings
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.slider("HM marker size", 2, 30, key='ps_heatmap_marker_size', help="Marker size for heatmap interpolation layer")
+            st.slider("HM marker size", 2, 30, value=st.session_state.get('ps_heatmap_marker_size', 5), key='ps_heatmap_marker_size', help="Marker size for heatmap interpolation layer")
         with c2:
-            st.slider("HM opacity", 0.1, 1.0, step=0.1, key='ps_heatmap_opacity', help="Opacity for heatmap interpolation layer")
+            st.slider("HM opacity", 0.1, 1.0, value=st.session_state.get('ps_heatmap_opacity', 1.0), step=0.1, key='ps_heatmap_opacity', help="Opacity for heatmap interpolation layer")
 
 
 def main():
