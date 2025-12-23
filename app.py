@@ -118,6 +118,7 @@ def initialize_session_state():
         'ps_heatmap_method': 'linear',
         'ps_heatmap_marker_mode': 'fill',
         'ps_heatmap_marker_size': 8,
+        'ps_heatmap_symbol': 'hexagon2',
         'ps_heatmap_opacity': 1.0,
         'ps_margin_top': 40,
         'ps_margin_bottom': 60,
@@ -291,7 +292,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                                 showscale=settings.get('show_colorbar', True),
                                 colorbar=colorbar_dict,
                                 opacity=settings.get('heatmap_opacity', 1.0),
-                                symbol='hexagon2',
+                                symbol=settings.get('heatmap_symbol', 'hexagon2'),
                             ),
                             hoverinfo='text',
                             text=[f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}<br>{labels['Z']}: {z:.4g}"
@@ -753,6 +754,7 @@ def render_plot_settings():
         'ps_heatmap_method': 'linear',
         'ps_heatmap_marker_mode': 'fill',
         'ps_heatmap_marker_size': 8,
+        'ps_heatmap_symbol': 'hexagon2',
         'ps_heatmap_opacity': 1.0,
         'ps_margin_top': 40,
         'ps_margin_bottom': 60,
@@ -909,7 +911,7 @@ def render_plot_settings():
 
     if st.session_state.ps_heatmap_enabled:
         with c2:
-            st.slider("Resolution", 10, 100, value=st.session_state.get('ps_heatmap_resolution', 100), key='ps_heatmap_resolution', help="Number of grid points for interpolation (higher = smoother)")
+            st.slider("Resolution", 10, 500, value=st.session_state.get('ps_heatmap_resolution', 100), key='ps_heatmap_resolution', help="Number of grid points for interpolation (higher = smoother)")
         with c3:
             method_help = "\n".join([f"**{m}**: {INTERPOLATION_METHODS[m]}" for m in methods])
             current_method = st.session_state.get('ps_heatmap_method', 'linear')
@@ -924,10 +926,18 @@ def render_plot_settings():
                         help=mode_help)
 
         # Heatmap-specific marker settings
+        hm_symbols = ['hexagon2', 'circle', 'square', 'diamond', 'triangle-up', 'triangle-down']
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             st.slider("HM marker size", 2, 30, value=st.session_state.get('ps_heatmap_marker_size', 8), key='ps_heatmap_marker_size', help="Marker size for heatmap interpolation layer")
         with c2:
+            current_hm_symbol = st.session_state.get('ps_heatmap_symbol', 'hexagon2')
+            hm_symbol_index = hm_symbols.index(current_hm_symbol) if current_hm_symbol in hm_symbols else 0
+            st.selectbox("HM symbol", hm_symbols, index=hm_symbol_index, key='ps_heatmap_symbol',
+                        format_func=lambda x: {'hexagon2': 'Hexagon', 'circle': 'Circle', 'square': 'Square',
+                                               'diamond': 'Diamond', 'triangle-up': 'Triangle Up', 'triangle-down': 'Triangle Down'}[x],
+                        help="Marker symbol for heatmap fill")
+        with c3:
             st.slider("HM opacity", 0.1, 1.0, value=st.session_state.get('ps_heatmap_opacity', 1.0), step=0.1, key='ps_heatmap_opacity', help="Opacity for heatmap interpolation layer")
 
 
@@ -988,6 +998,7 @@ def main():
                 'heatmap_method': st.session_state.get('ps_heatmap_method', 'linear'),
                 'heatmap_marker_mode': st.session_state.get('ps_heatmap_marker_mode', 'fill'),
                 'heatmap_marker_size': st.session_state.get('ps_heatmap_marker_size', 8),
+                'heatmap_symbol': st.session_state.get('ps_heatmap_symbol', 'hexagon2'),
                 'heatmap_opacity': st.session_state.get('ps_heatmap_opacity', 1.0),
                 'margin_top': st.session_state.get('ps_margin_top', 40),
                 'margin_bottom': st.session_state.get('ps_margin_bottom', 60),
