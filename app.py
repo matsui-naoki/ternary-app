@@ -470,11 +470,11 @@ def render_data_loader():
                 new_data['Z'] = sample_df['sigma']
                 new_data['Name'] = ''
                 st.session_state.data = new_data
-                st.session_state.labels = {'A': 'Li2S', 'B': 'P2S5', 'C': 'LiI', 'Z': 'σ / mS cm⁻¹'}
+                st.session_state.labels = {'A': 'Li2S', 'B': 'P2S5', 'C': 'LiI', 'Z': 'σ / S cm⁻¹'}
                 st.session_state.label_a = 'Li2S'
                 st.session_state.label_b = 'P2S5'
                 st.session_state.label_c = 'LiI'
-                st.session_state.label_z = 'σ / mS cm⁻¹'
+                st.session_state.label_z = 'σ / S cm⁻¹'
                 # Enable heatmap since Z values exist
                 st.session_state.ps_heatmap_enabled = True
                 st.session_state.data_version += 1
@@ -556,7 +556,7 @@ def render_data_labels():
 
     z_presets = {
         'custom': 'Custom',
-        'sigma': '<i>σ</i><sub>298K</sub> / mS cm<sup>–1</sup>',
+        'sigma': '<i>σ</i><sub>298K</sub> / S cm<sup>–1</sup>',
         'ea': '<i>E</i><sub>a</sub> / kJ mol<sup>–1</sup>',
         'capacity': 'Capacity / mAh g<sup>–1</sup>'
     }
@@ -901,7 +901,7 @@ def render_plot_settings():
     st.markdown("##### Heatmap")
 
     methods = ['linear', 'cubic', 'nearest']
-    marker_modes = ['white', 'fill', 'hide']
+    marker_modes = ['fill', 'white', 'hide']  # 'fill' first as default
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -912,10 +912,14 @@ def render_plot_settings():
             st.slider("Resolution", 10, 100, value=st.session_state.get('ps_heatmap_resolution', 100), key='ps_heatmap_resolution', help="Number of grid points for interpolation (higher = smoother)")
         with c3:
             method_help = "\n".join([f"**{m}**: {INTERPOLATION_METHODS[m]}" for m in methods])
-            st.selectbox("Method", methods, key='ps_heatmap_method', help=method_help)
+            current_method = st.session_state.get('ps_heatmap_method', 'linear')
+            method_index = methods.index(current_method) if current_method in methods else 0
+            st.selectbox("Method", methods, index=method_index, key='ps_heatmap_method', help=method_help)
         with c4:
             mode_help = "\n".join([f"**{m}**: {HEATMAP_MARKER_MODES[m]}" for m in marker_modes])
-            st.selectbox("Markers", marker_modes, key='ps_heatmap_marker_mode',
+            current_mode = st.session_state.get('ps_heatmap_marker_mode', 'fill')
+            mode_index = marker_modes.index(current_mode) if current_mode in marker_modes else 0
+            st.selectbox("Markers", marker_modes, index=mode_index, key='ps_heatmap_marker_mode',
                         format_func=lambda x: {'white': 'White fill', 'fill': 'Color fill', 'hide': 'Hide'}[x],
                         help=mode_help)
 
