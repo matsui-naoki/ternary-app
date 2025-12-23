@@ -1014,8 +1014,8 @@ def main():
                 'toImageButtonOptions': {
                     'format': 'png',
                     'filename': 'ternary_plot',
-                    'width': settings.get('fig_width', 700) * 2,
-                    'height': settings.get('fig_height', 600) * 2,
+                    'width': settings.get('fig_width', 700),
+                    'height': settings.get('fig_height', 600),
                     'scale': 2
                 },
                 'displayModeBar': True,
