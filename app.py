@@ -653,7 +653,7 @@ def render_plot_settings():
     widget_defaults = {
         'ps_fig_width': 700,
         'ps_fig_height': 600,
-        'ps_colorscale': 'Jet',  # Jet first
+        'ps_colorscale': 'Turbo',
         'ps_reverse_colorscale': False,
         'ps_auto_z_range': True,
         'ps_log_scale': False,
@@ -679,8 +679,8 @@ def render_plot_settings():
         'ps_colorbar_y': 0.5,
         'ps_colorbar_ticks': True,
         'ps_colorbar_title_side': 'right',
-        'ps_discrete_colors': False,
-        'ps_discrete_steps': 5,  # Default 5
+        'ps_discrete_colors': True,
+        'ps_discrete_steps': 10,
         'ps_heatmap_enabled': False,
         'ps_heatmap_resolution': 100,
         'ps_heatmap_method': 'linear',
@@ -769,7 +769,7 @@ def render_plot_settings():
     # ===== Colorbar Settings =====
     st.markdown("##### Colorbar")
 
-    colorscales = ['Jet', 'Viridis', 'Plasma', 'Inferno', 'Magma', 'Turbo', 'Hot', 'RdBu', 'RdYlBu', 'Blues', 'Reds']
+    colorscales = ['Turbo', 'Jet', 'Viridis', 'Plasma', 'Inferno', 'Magma', 'Hot', 'RdBu', 'RdYlBu', 'Blues', 'Reds']
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.selectbox("Colorscale", colorscales, key='ps_colorscale')
@@ -881,7 +881,7 @@ def main():
             settings = {
                 'fig_width': st.session_state.get('ps_fig_width', 700),
                 'fig_height': st.session_state.get('ps_fig_height', 600),
-                'colorscale': st.session_state.get('ps_colorscale', 'Jet'),
+                'colorscale': st.session_state.get('ps_colorscale', 'Turbo'),
                 'reverse_colorscale': st.session_state.get('ps_reverse_colorscale', False),
                 'auto_z_range': st.session_state.get('ps_auto_z_range', True),
                 'z_min': st.session_state.get('ps_z_min'),
@@ -910,8 +910,8 @@ def main():
                 'colorbar_y': st.session_state.get('ps_colorbar_y', 0.5),
                 'colorbar_ticks': st.session_state.get('ps_colorbar_ticks', True),
                 'colorbar_title_side': st.session_state.get('ps_colorbar_title_side', 'right'),
-                'discrete_colors': st.session_state.get('ps_discrete_colors', False),
-                'discrete_steps': st.session_state.get('ps_discrete_steps', 5),
+                'discrete_colors': st.session_state.get('ps_discrete_colors', True),
+                'discrete_steps': st.session_state.get('ps_discrete_steps', 10),
                 'heatmap_enabled': st.session_state.get('ps_heatmap_enabled', False),
                 'heatmap_resolution': st.session_state.get('ps_heatmap_resolution', 100),
                 'heatmap_method': st.session_state.get('ps_heatmap_method', 'linear'),
