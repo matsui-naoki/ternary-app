@@ -247,13 +247,13 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                                     colorscale=colorscale,
                                     cmin=z_min_plot, cmax=z_max_plot,
                                     showscale=False,
-                                    line=dict(color=settings.get('marker_line_color', '#000000'), width=settings.get('marker_line_width', 2)),
+                                    line=dict(color=settings.get('marker_line_color', '#000000'), width=settings.get('marker_line_width', 1)),
                                 )
                             else:  # white
                                 marker_dict = dict(
                                     size=settings.get('marker_size', 12) + 2,
                                     color='white',
-                                    line=dict(color=settings.get('marker_line_color', '#000000'), width=settings.get('marker_line_width', 2)),
+                                    line=dict(color=settings.get('marker_line_color', '#000000'), width=settings.get('marker_line_width', 1)),
                                 )
 
                             fig.add_trace(go.Scatterternary(
