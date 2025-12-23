@@ -1,4 +1,4 @@
-# Ternary Plot Analyzer
+# Ternary Plot Visualizer
 
 Three-component composition diagram visualization tool for academic papers and presentations.
 
@@ -9,14 +9,15 @@ Three-component composition diagram visualization tool for academic papers and p
 - **Editable Data Table**: Add, edit, and delete data points directly in the browser
 - **Composition Formula Support**:
   - Automatic reduced formula calculation (A+B+C → reduced formula) using pymatgen
-  - Formula factorization (e.g., Li3PS4 → Li2S + P2S5 coefficients)
+  - Formula factorization (input a formula like Li3PS4 to auto-calculate A/B/C coefficients)
 - **Publication-Ready Figures**:
   - Customizable figure size, fonts, and colors
-  - Multiple colorscales (Viridis, Plasma, Jet, etc.)
+  - Multiple colorscales (Viridis, Plasma, Jet, etc.) with discrete/continuous options
   - Auto-subscript for chemical formulas (Li2O → Li₂O)
-  - PNG/SVG export
+  - Colorbar customization (size, position, ticks, title placement)
+  - PNG/SVG export at high resolution
 - **Interpolation**: Smooth heatmap interpolation between data points
-- **Z Value Heatmap**: Color-coded property values (conductivity, activation energy, capacity, etc.)
+- **Z Value Heatmap**: Color-coded property values with preset labels (σ, Ea, capacity) or custom
 
 ## Installation
 
