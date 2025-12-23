@@ -179,10 +179,10 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                 z_max_plot = z_max
 
             heatmap_enabled = settings.get('heatmap_enabled', False)
-            heatmap_marker_mode = settings.get('heatmap_marker_mode', 'white')
+            heatmap_marker_mode = settings.get('heatmap_marker_mode', 'fill')
 
             if heatmap_enabled and z_vals is not None and len(z_vals) > 3 and not np.all(np.isnan(z_vals)):
-                resolution = settings.get('heatmap_resolution', 50)
+                resolution = settings.get('heatmap_resolution', 100)
                 method = settings.get('heatmap_method', 'linear')
 
                 grid_a, grid_b, grid_c = [], [], []
@@ -222,13 +222,13 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                             a=grid_a[valid_mask], b=grid_b[valid_mask], c=grid_c[valid_mask],
                             mode='markers',
                             marker=dict(
-                                size=settings.get('heatmap_marker_size', 8),
+                                size=settings.get('heatmap_marker_size', 10),
                                 color=z_interp[valid_mask],
                                 colorscale=colorscale,
                                 cmin=z_min_plot, cmax=z_max_plot,
                                 showscale=settings.get('show_colorbar', True),
                                 colorbar=colorbar_dict,
-                                opacity=settings.get('heatmap_opacity', 0.6),
+                                opacity=settings.get('heatmap_opacity', 1.0),
                                 symbol='hexagon2',
                             ),
                             hoverinfo='text',
@@ -895,11 +895,11 @@ def main():
                 'discrete_colors': st.session_state.get('ps_discrete_colors', False),
                 'discrete_steps': st.session_state.get('ps_discrete_steps', 5),
                 'heatmap_enabled': st.session_state.get('ps_heatmap_enabled', False),
-                'heatmap_resolution': st.session_state.get('ps_heatmap_resolution', 50),
+                'heatmap_resolution': st.session_state.get('ps_heatmap_resolution', 100),
                 'heatmap_method': st.session_state.get('ps_heatmap_method', 'linear'),
-                'heatmap_marker_mode': st.session_state.get('ps_heatmap_marker_mode', 'white'),
-                'heatmap_marker_size': st.session_state.get('ps_heatmap_marker_size', 8),
-                'heatmap_opacity': st.session_state.get('ps_heatmap_opacity', 0.6),
+                'heatmap_marker_mode': st.session_state.get('ps_heatmap_marker_mode', 'fill'),
+                'heatmap_marker_size': st.session_state.get('ps_heatmap_marker_size', 10),
+                'heatmap_opacity': st.session_state.get('ps_heatmap_opacity', 1.0),
                 'margin_top': st.session_state.get('ps_margin_top', 40),
                 'margin_bottom': st.session_state.get('ps_margin_bottom', 60),
                 'margin_left': st.session_state.get('ps_margin_left', 60),
