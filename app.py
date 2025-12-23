@@ -19,6 +19,10 @@ from utils import (
     get_sample_data,
     PYMATGEN_AVAILABLE,
     SYMPY_AVAILABLE,
+    INTERPOLATION_METHODS,
+    HEATMAP_MARKER_MODES,
+    LOG_SCALE_HELP,
+    DISCRETE_COLORS_HELP,
 )
 
 # Import Composition for data table (need it directly)
@@ -63,45 +67,17 @@ def initialize_session_state():
         st.session_state.z_label_preset = 'custom'
 
     if 'plot_settings' not in st.session_state:
-        st.session_state.plot_settings = {
-            'fig_width': 700,
-            'fig_height': 600,
-            'colorscale': 'Viridis',
-            'reverse_colorscale': False,
-            'z_min': None,
-            'z_max': None,
-            'auto_z_range': True,
-            'interpolate': False,
-            'interpolation_resolution': 50,
-            'interpolation_method': 'linear',
-            'marker_size': 12,
-            'marker_symbol': 'circle',
-            'marker_line_color': '#000000',
-            'marker_line_width': 1,
-            'marker_opacity': 0.8,
-            'axis_line_width': 2,
-            'grid_line_width': 1,
-            'show_grid': True,
-            'tick_step': 0.1,
-            'show_tick_labels': True,
-            'title_font_size': 24,
-            'axis_font_size': 20,
-            'tick_font_size': 14,
-            'auto_subscript': True,
-            'bgcolor': 'white',
-            'show_colorbar': True,
-            'colorbar_title': '',
-            'margin_top': 40,
-            'margin_bottom': 60,
-            'margin_left': 40,
-            'margin_right': 40,
-        }
+        st.session_state.plot_settings = {}
 
     if 'uploaded_file_name' not in st.session_state:
         st.session_state.uploaded_file_name = None
 
     if 'loaded_file_data' not in st.session_state:
         st.session_state.loaded_file_data = None
+
+    # Initialize data version for tracking changes
+    if 'data_version' not in st.session_state:
+        st.session_state.data_version = 0
 
 
 def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Dict) -> go.Figure:
@@ -131,36 +107,33 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
         z_min = settings.get('z_min', 0)
         z_max = settings.get('z_max', 1)
 
-    colorscale = settings.get('colorscale', 'Viridis')
+    colorscale = settings.get('colorscale', 'Jet')
     if settings.get('reverse_colorscale', False):
         colorscale = colorscale + '_r'
 
     # Create discrete colorscale if enabled
     if settings.get('discrete_colors', False):
         import plotly.colors as pc
-        n_steps = settings.get('discrete_steps', 10)
+        n_steps = settings.get('discrete_steps', 5)
         try:
-            base_colors = pc.get_colorscale(colorscale)
             discrete_colorscale = []
             for i in range(n_steps):
-                # Create discrete bands
                 low = i / n_steps
                 high = (i + 1) / n_steps
-                # Get color at midpoint
                 mid = (low + high) / 2
                 color = pc.sample_colorscale(colorscale, [mid])[0]
                 discrete_colorscale.append([low, color])
                 discrete_colorscale.append([high, color])
             colorscale = discrete_colorscale
         except Exception:
-            pass  # Fall back to continuous colorscale
+            pass
 
     # Build colorbar dict with all settings
     cb_title_side = settings.get('colorbar_title_side', 'right')
     colorbar_dict = dict(
         title=dict(
             text=settings.get('colorbar_title', '') or labels.get('Z', 'Z'),
-            font=dict(size=settings.get('axis_font_size', 20), family=font_family, color=font_color),
+            font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color),
             side=cb_title_side,
         ),
         tickfont=dict(size=settings.get('tick_font_size', 14), family=font_family, color=font_color),
@@ -171,9 +144,10 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
         ticks='outside' if settings.get('colorbar_ticks', True) else '',
         showticklabels=settings.get('colorbar_ticks', True),
     )
-    # For 'top' title side, rotate title 90 degrees
-    if cb_title_side == 'top':
-        colorbar_dict['title']['side'] = 'top'
+
+    # Grid settings
+    grid_color = settings.get('grid_color', '#808080')
+    grid_width = settings.get('grid_line_width', 1)
 
     if len(data) > 0:
         valid_data = data.dropna(subset=['A', 'B', 'C'])
@@ -192,9 +166,22 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
 
             z_vals = valid_data['Z'].values if 'Z' in valid_data.columns else None
 
-            if settings.get('interpolate', False) and z_vals is not None and len(z_vals) > 3 and not np.all(np.isnan(z_vals)):
-                resolution = settings.get('interpolation_resolution', 50)
-                method = settings.get('interpolation_method', 'linear')
+            # Apply log scale if enabled
+            if settings.get('log_scale', False) and z_vals is not None:
+                z_vals_plot = np.log10(np.clip(z_vals, 1e-10, None))
+                z_min_plot = np.log10(max(z_min, 1e-10)) if z_min > 0 else -10
+                z_max_plot = np.log10(max(z_max, 1e-10)) if z_max > 0 else 0
+            else:
+                z_vals_plot = z_vals
+                z_min_plot = z_min
+                z_max_plot = z_max
+
+            heatmap_enabled = settings.get('heatmap_enabled', False)
+            heatmap_marker_mode = settings.get('heatmap_marker_mode', 'white')
+
+            if heatmap_enabled and z_vals is not None and len(z_vals) > 3 and not np.all(np.isnan(z_vals)):
+                resolution = settings.get('heatmap_resolution', 50)
+                method = settings.get('heatmap_method', 'linear')
 
                 grid_a, grid_b, grid_c = [], [], []
                 for i in range(resolution + 1):
@@ -217,28 +204,29 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                     x_grid = 0.5 * (2 * grid_b + grid_c)
                     y_grid = (np.sqrt(3) / 2) * grid_c
 
-                    valid_z_mask = ~np.isnan(z_vals)
+                    valid_z_mask = ~np.isnan(z_vals_plot)
                     if np.sum(valid_z_mask) >= 3:
                         z_interp = griddata(
                             (x_data[valid_z_mask], y_data[valid_z_mask]),
-                            z_vals[valid_z_mask],
+                            z_vals_plot[valid_z_mask],
                             (x_grid, y_grid),
                             method=method
                         )
 
                         valid_mask = ~np.isnan(z_interp)
 
+                        # Heatmap layer - use heatmap-specific marker size and opacity
                         fig.add_trace(go.Scatterternary(
                             a=grid_a[valid_mask], b=grid_b[valid_mask], c=grid_c[valid_mask],
                             mode='markers',
                             marker=dict(
-                                size=settings.get('marker_size', 12),
+                                size=settings.get('heatmap_marker_size', 8),
                                 color=z_interp[valid_mask],
                                 colorscale=colorscale,
-                                cmin=z_min, cmax=z_max,
+                                cmin=z_min_plot, cmax=z_max_plot,
                                 showscale=settings.get('show_colorbar', True),
                                 colorbar=colorbar_dict,
-                                opacity=settings.get('marker_opacity', 0.6),
+                                opacity=settings.get('heatmap_opacity', 0.6),
                                 symbol='hexagon2',
                             ),
                             hoverinfo='text',
@@ -247,26 +235,45 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                             showlegend=False
                         ))
 
-                        fig.add_trace(go.Scatterternary(
-                            a=a_norm, b=b_norm, c=c_norm,
-                            mode='markers',
-                            marker=dict(
-                                size=settings.get('marker_size', 12) + 2,
-                                color='white',
-                                line=dict(color=settings.get('marker_line_color', '#000000'), width=settings.get('marker_line_width', 2)),
-                            ),
-                            hoverinfo='text',
-                            text=[f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}<br>{labels['Z']}: {z:.4g}" if not np.isnan(z) else
-                                  f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
-                                  for a, b, c, z in zip(a_norm, b_norm, c_norm, z_vals)],
-                            showlegend=False
-                        ))
-                    else:
-                        settings['interpolate'] = False
-                except Exception:
-                    settings['interpolate'] = False
+                        # Data points layer based on mode
+                        if heatmap_marker_mode != 'hide':
+                            if heatmap_marker_mode == 'fill':
+                                # Color-filled markers
+                                marker_dict = dict(
+                                    size=settings.get('marker_size', 12) + 2,
+                                    color=z_vals_plot,
+                                    colorscale=colorscale,
+                                    cmin=z_min_plot, cmax=z_max_plot,
+                                    showscale=False,
+                                    line=dict(color=settings.get('marker_line_color', '#000000'), width=settings.get('marker_line_width', 2)),
+                                )
+                            else:  # white
+                                marker_dict = dict(
+                                    size=settings.get('marker_size', 12) + 2,
+                                    color='white',
+                                    line=dict(color=settings.get('marker_line_color', '#000000'), width=settings.get('marker_line_width', 2)),
+                                )
 
-            if not settings.get('interpolate', False):
+                            fig.add_trace(go.Scatterternary(
+                                a=a_norm, b=b_norm, c=c_norm,
+                                mode='markers',
+                                marker=marker_dict,
+                                hoverinfo='text',
+                                text=[f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}<br>{labels['Z']}: {z:.4g}" if not np.isnan(z) else
+                                      f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
+                                      for a, b, c, z in zip(a_norm, b_norm, c_norm, z_vals)],
+                                showlegend=False
+                            ))
+                    else:
+                        heatmap_enabled = False
+                except Exception:
+                    heatmap_enabled = False
+
+            if not heatmap_enabled:
+                # Single color mode
+                use_single_color = settings.get('use_single_color', False)
+                single_color = settings.get('single_color', '#1f77b4')
+
                 marker_dict = dict(
                     size=settings.get('marker_size', 12),
                     symbol=settings.get('marker_symbol', 'circle'),
@@ -274,11 +281,15 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                     opacity=settings.get('marker_opacity', 0.8),
                 )
 
-                if z_vals is not None and len(z_vals) > 0 and not np.all(np.isnan(z_vals)):
-                    marker_dict['color'] = z_vals
+                if use_single_color:
+                    marker_dict['color'] = single_color
+                    hover_text = [f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
+                                  for a, b, c in zip(a_norm, b_norm, c_norm)]
+                elif z_vals_plot is not None and len(z_vals_plot) > 0 and not np.all(np.isnan(z_vals_plot)):
+                    marker_dict['color'] = z_vals_plot
                     marker_dict['colorscale'] = colorscale
-                    marker_dict['cmin'] = z_min
-                    marker_dict['cmax'] = z_max
+                    marker_dict['cmin'] = z_min_plot
+                    marker_dict['cmax'] = z_max_plot
                     marker_dict['showscale'] = settings.get('show_colorbar', True)
                     marker_dict['colorbar'] = colorbar_dict
                     hover_text = [f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}<br>{labels['Z']}: {z:.4g}" if not np.isnan(z) else
@@ -304,37 +315,37 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
         ternary=dict(
             sum=1,
             aaxis=dict(
-                title=dict(text=a_label, font=dict(size=settings.get('axis_font_size', 20), family=font_family, color=font_color)),
+                title=dict(text=a_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color)),
                 tickfont=dict(size=settings.get('tick_font_size', 14), family=font_family, color=font_color),
                 linewidth=settings.get('axis_line_width', 2),
                 linecolor='black',
-                gridcolor='gray' if settings.get('show_grid', True) else 'rgba(0,0,0,0)',
-                gridwidth=settings.get('grid_line_width', 1),
+                gridcolor=grid_color if settings.get('show_grid', True) else 'rgba(0,0,0,0)',
+                gridwidth=grid_width,
                 tick0=0, dtick=tick_step,
-                showticklabels=settings.get('show_tick_labels', True),
-                ticks='outside' if settings.get('show_tick_labels', True) else '',
+                showticklabels=settings.get('show_tick_labels', False),
+                ticks='outside' if settings.get('show_tick_labels', False) else '',
             ),
             baxis=dict(
-                title=dict(text=b_label, font=dict(size=settings.get('axis_font_size', 20), family=font_family, color=font_color)),
+                title=dict(text=b_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color)),
                 tickfont=dict(size=settings.get('tick_font_size', 14), family=font_family, color=font_color),
                 linewidth=settings.get('axis_line_width', 2),
                 linecolor='black',
-                gridcolor='gray' if settings.get('show_grid', True) else 'rgba(0,0,0,0)',
-                gridwidth=settings.get('grid_line_width', 1),
+                gridcolor=grid_color if settings.get('show_grid', True) else 'rgba(0,0,0,0)',
+                gridwidth=grid_width,
                 tick0=0, dtick=tick_step,
-                showticklabels=settings.get('show_tick_labels', True),
-                ticks='outside' if settings.get('show_tick_labels', True) else '',
+                showticklabels=settings.get('show_tick_labels', False),
+                ticks='outside' if settings.get('show_tick_labels', False) else '',
             ),
             caxis=dict(
-                title=dict(text=c_label, font=dict(size=settings.get('axis_font_size', 20), family=font_family, color=font_color)),
+                title=dict(text=c_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color)),
                 tickfont=dict(size=settings.get('tick_font_size', 14), family=font_family, color=font_color),
                 linewidth=settings.get('axis_line_width', 2),
                 linecolor='black',
-                gridcolor='gray' if settings.get('show_grid', True) else 'rgba(0,0,0,0)',
-                gridwidth=settings.get('grid_line_width', 1),
+                gridcolor=grid_color if settings.get('show_grid', True) else 'rgba(0,0,0,0)',
+                gridwidth=grid_width,
                 tick0=0, dtick=tick_step,
-                showticklabels=settings.get('show_tick_labels', True),
-                ticks='outside' if settings.get('show_tick_labels', True) else '',
+                showticklabels=settings.get('show_tick_labels', False),
+                ticks='outside' if settings.get('show_tick_labels', False) else '',
             ),
             bgcolor=settings.get('bgcolor', 'white'),
         ),
@@ -344,8 +355,8 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
         paper_bgcolor='white',
         plot_bgcolor='white',
         margin=dict(
-            l=settings.get('margin_left', 40),
-            r=settings.get('margin_right', 40),
+            l=settings.get('margin_left', 60),
+            r=settings.get('margin_right', 60),
             t=settings.get('margin_top', 40),
             b=settings.get('margin_bottom', 60)
         ),
@@ -375,6 +386,7 @@ def render_data_loader():
             st.session_state.label_b = 'P2S5'
             st.session_state.label_c = 'LiI'
             st.session_state.label_z = 'σ / mS cm⁻¹'
+            st.session_state.data_version += 1
             st.rerun()
 
     if uploaded_file is not None:
@@ -427,6 +439,7 @@ def render_data_loader():
                         st.session_state.z_label_preset = 'custom'
 
                 st.session_state.data = new_data
+                st.session_state.data_version += 1
                 st.rerun()
 
 
@@ -452,10 +465,8 @@ def render_data_labels():
 
     is_custom = st.session_state.z_label_preset == 'custom'
 
-    if is_custom:
-        c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
-    else:
-        c1, c2, c3, c4 = st.columns(4)
+    # Always use 4 columns for A, B, C, Z preset
+    c1, c2, c3, c4 = st.columns(4)
 
     with c1:
         new_a = st.text_input("A", key='label_a')
@@ -480,15 +491,18 @@ def render_data_labels():
                 st.session_state.label_z = z_presets[z_preset]
             st.rerun()
 
+    # Show Z input on new line when Custom is selected
     if is_custom:
-        with c5:
-            new_z = st.text_input("Z", key='label_z')
-            st.session_state.labels['Z'] = new_z
+        new_z = st.text_input("Z label", key='label_z')
+        st.session_state.labels['Z'] = new_z
 
 
 def render_data_table():
     """Render data table section."""
     st.markdown("#### Data Table")
+
+    # Use data_version to force refresh when data changes externally
+    data_version = st.session_state.get('data_version', 0)
 
     display_df = st.session_state.data.copy()
     for col in ['A', 'B', 'C', 'Z']:
@@ -517,6 +531,7 @@ def render_data_table():
     else:
         display_df['SUM'] = ""
 
+    # Use unique key with data_version to force refresh
     edited_df = st.data_editor(
         display_df,
         column_config={
@@ -527,13 +542,16 @@ def render_data_table():
             "SUM": st.column_config.TextColumn("Formula", disabled=True),
         },
         num_rows="dynamic",
-        key='data_editor',
+        key=f'data_editor_{data_version}',
         height=300
     )
 
     if 'SUM' in edited_df.columns:
         edited_df = edited_df.drop(columns=['SUM'])
-    st.session_state.data = edited_df
+
+    # Check if data actually changed to avoid infinite loop
+    if not edited_df.equals(st.session_state.data):
+        st.session_state.data = edited_df
 
     c1, c2 = st.columns([1, 3])
     with c1:
@@ -542,6 +560,7 @@ def render_data_table():
                 'A': pd.Series(dtype='float64'), 'B': pd.Series(dtype='float64'),
                 'C': pd.Series(dtype='float64'), 'Z': pd.Series(dtype='float64')
             })
+            st.session_state.data_version += 1
             st.rerun()
 
     # Composition Factorizer
@@ -568,6 +587,7 @@ def render_data_table():
                                 'Z': [z_value]
                             })
                             st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
+                            st.session_state.data_version += 1
                             st.rerun()
                         else:
                             st.error("Factorization result is zero")
@@ -579,57 +599,136 @@ def render_plot_settings():
     """Render plot settings panel - all settings visible."""
     st.markdown("#### Plot Settings")
 
-    s = st.session_state.plot_settings
+    # Widget defaults - updated per requirements
     widget_defaults = {
-        'ps_fig_width': s.get('fig_width', 700),
-        'ps_fig_height': s.get('fig_height', 600),
-        'ps_colorscale': s.get('colorscale', 'Viridis'),
-        'ps_reverse_colorscale': s.get('reverse_colorscale', False),
-        'ps_auto_z_range': s.get('auto_z_range', True),
-        'ps_marker_size': s.get('marker_size', 12),
-        'ps_marker_symbol': s.get('marker_symbol', 'circle'),
-        'ps_marker_line_width': s.get('marker_line_width', 1),
-        'ps_marker_opacity': s.get('marker_opacity', 0.8),
-        'ps_axis_line_width': s.get('axis_line_width', 2),
-        'ps_show_grid': s.get('show_grid', True),
-        'ps_show_tick_labels': s.get('show_tick_labels', False),  # Default OFF
-        'ps_auto_subscript': s.get('auto_subscript', True),
-        'ps_axis_font_size': s.get('axis_font_size', 20),
-        'ps_tick_font_size': s.get('tick_font_size', 14),
-        'ps_tick_step': s.get('tick_step', 0.1),
-        'ps_show_colorbar': s.get('show_colorbar', True),
-        'ps_colorbar_len': s.get('colorbar_len', 0.6),
-        'ps_colorbar_thickness': s.get('colorbar_thickness', 20),
-        'ps_colorbar_x': s.get('colorbar_x', 1.02),
-        'ps_colorbar_y': s.get('colorbar_y', 0.5),
-        'ps_colorbar_ticks': s.get('colorbar_ticks', True),
-        'ps_colorbar_title_side': s.get('colorbar_title_side', 'right'),
-        'ps_discrete_colors': s.get('discrete_colors', False),
-        'ps_discrete_steps': s.get('discrete_steps', 10),
-        'ps_interpolate': s.get('interpolate', False),
-        'ps_interpolation_resolution': s.get('interpolation_resolution', 50),
-        'ps_interpolation_method': s.get('interpolation_method', 'linear'),
-        'ps_margin_top': s.get('margin_top', 40),
-        'ps_margin_bottom': s.get('margin_bottom', 60),
-        'ps_margin_left': s.get('margin_left', 40),
-        'ps_margin_right': s.get('margin_right', 40),
+        'ps_fig_width': 700,
+        'ps_fig_height': 600,
+        'ps_colorscale': 'Jet',  # Jet first
+        'ps_reverse_colorscale': False,
+        'ps_auto_z_range': True,
+        'ps_log_scale': False,
+        'ps_marker_size': 12,
+        'ps_marker_symbol': 'circle',
+        'ps_marker_line_width': 1,
+        'ps_marker_opacity': 0.8,
+        'ps_use_single_color': False,
+        'ps_single_color': '#1f77b4',
+        'ps_axis_line_width': 2,
+        'ps_show_grid': True,
+        'ps_grid_color': '#808080',
+        'ps_grid_line_width': 1,
+        'ps_show_tick_labels': False,  # Default OFF
+        'ps_auto_subscript': True,
+        'ps_axis_font_size': 24,  # Default 24
+        'ps_tick_font_size': 14,
+        'ps_tick_step': 0.1,
+        'ps_show_colorbar': True,
+        'ps_colorbar_len': 0.6,
+        'ps_colorbar_thickness': 20,
+        'ps_colorbar_x': 1.02,
+        'ps_colorbar_y': 0.5,
+        'ps_colorbar_ticks': True,
+        'ps_colorbar_title_side': 'right',
+        'ps_discrete_colors': False,
+        'ps_discrete_steps': 5,  # Default 5
+        'ps_heatmap_enabled': False,
+        'ps_heatmap_resolution': 50,
+        'ps_heatmap_method': 'linear',
+        'ps_heatmap_marker_mode': 'white',
+        'ps_heatmap_marker_size': 8,
+        'ps_heatmap_opacity': 0.6,
+        'ps_margin_top': 40,
+        'ps_margin_bottom': 60,
+        'ps_margin_left': 60,  # Default 60
+        'ps_margin_right': 60,  # Default 60
     }
 
     for key, default in widget_defaults.items():
         if key not in st.session_state:
             st.session_state[key] = default
 
-    # Size & Color
+    # ===== General Settings =====
+    st.markdown("##### General")
+
     c1, c2, c3, c4 = st.columns(4)
-    colorscales = ['Viridis', 'Plasma', 'Inferno', 'Magma', 'Turbo', 'Jet', 'Hot', 'RdBu', 'RdYlBu', 'Blues', 'Reds']
     with c1:
         st.number_input("Width", 400, 1500, step=50, key='ps_fig_width')
     with c2:
         st.number_input("Height", 400, 1500, step=50, key='ps_fig_height')
     with c3:
-        st.selectbox("Colorscale", colorscales, key='ps_colorscale')
+        st.number_input("Axis font", 8, 40, key='ps_axis_font_size')
     with c4:
+        st.number_input("Tick font", 8, 30, key='ps_tick_font_size')
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.slider("Axis width", 1, 5, key='ps_axis_line_width')
+    with c2:
+        st.checkbox("Grid", key='ps_show_grid')
+    with c3:
+        st.checkbox("Ticks", key='ps_show_tick_labels')
+    with c4:
+        st.checkbox("Subscript", key='ps_auto_subscript')
+
+    if st.session_state.ps_show_grid:
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.color_picker("Grid color", key='ps_grid_color')
+        with c2:
+            st.slider("Grid width", 1, 5, key='ps_grid_line_width')
+        with c3:
+            tick_options = [0.05, 0.1, 0.2, 0.25, 0.5]
+            st.selectbox("Tick step", tick_options, key='ps_tick_step')
+
+    # Margins
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.number_input("Margin Top", 0, 200, step=10, key='ps_margin_top')
+    with c2:
+        st.number_input("Margin Bottom", 0, 200, step=10, key='ps_margin_bottom')
+    with c3:
+        st.number_input("Margin Left", 0, 200, step=10, key='ps_margin_left')
+    with c4:
+        st.number_input("Margin Right", 0, 200, step=10, key='ps_margin_right')
+
+    st.markdown("---")
+
+    # ===== Marker Settings =====
+    st.markdown("##### Markers")
+
+    symbols = ['circle', 'square', 'diamond', 'triangle-up', 'hexagon', 'star']
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.slider("Marker size", 2, 30, key='ps_marker_size')
+    with c2:
+        st.selectbox("Symbol", symbols, key='ps_marker_symbol')
+    with c3:
+        st.slider("Edge width", 0, 5, key='ps_marker_line_width')
+    with c4:
+        st.slider("Opacity", 0.0, 1.0, step=0.1, key='ps_marker_opacity')
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.checkbox("Single color", key='ps_use_single_color', help="Use a single color for all markers instead of Z-value colorscale")
+    if st.session_state.ps_use_single_color:
+        with c2:
+            st.color_picker("Color", key='ps_single_color')
+
+    st.markdown("---")
+
+    # ===== Colorbar Settings =====
+    st.markdown("##### Colorbar")
+
+    colorscales = ['Jet', 'Viridis', 'Plasma', 'Inferno', 'Magma', 'Turbo', 'Hot', 'RdBu', 'RdYlBu', 'Blues', 'Reds']
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.selectbox("Colorscale", colorscales, key='ps_colorscale')
+    with c2:
         st.checkbox("Reverse", key='ps_reverse_colorscale')
+    with c3:
+        st.checkbox("Log scale", key='ps_log_scale', help=LOG_SCALE_HELP)
+    with c4:
+        st.checkbox("Colorbar", key='ps_show_colorbar')
 
     # Z Range
     c1, c2, c3, c4 = st.columns(4)
@@ -654,89 +753,61 @@ def render_plot_settings():
         with c3:
             st.number_input("Z max", key='ps_z_max')
 
-    # Markers
-    symbols = ['circle', 'square', 'diamond', 'triangle-up', 'hexagon', 'star']
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.slider("Marker size", 2, 30, key='ps_marker_size')
-    with c2:
-        st.selectbox("Symbol", symbols, key='ps_marker_symbol')
-    with c3:
-        st.slider("Edge width", 0, 5, key='ps_marker_line_width')
-    with c4:
-        st.slider("Opacity", 0.0, 1.0, step=0.1, key='ps_marker_opacity')
-
-    # Axis
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.slider("Axis width", 1, 5, key='ps_axis_line_width')
-    with c2:
-        st.checkbox("Grid", key='ps_show_grid')
-    with c3:
-        st.checkbox("Ticks", key='ps_show_tick_labels')
-    with c4:
-        st.checkbox("Subscript", key='ps_auto_subscript')
-
-    # Fonts & Tick step
-    tick_options = [0.05, 0.1, 0.2, 0.25, 0.5]
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.number_input("Axis font", 8, 40, key='ps_axis_font_size')
-    with c2:
-        st.number_input("Tick font", 8, 30, key='ps_tick_font_size')
-    with c3:
-        st.selectbox("Tick step", tick_options, key='ps_tick_step')
-
-    # Colorbar settings
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.checkbox("Colorbar", key='ps_show_colorbar')
     if st.session_state.ps_show_colorbar:
-        with c2:
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
             st.slider("CB length", 0.2, 1.0, step=0.1, key='ps_colorbar_len')
-        with c3:
+        with c2:
             st.slider("CB thickness", 10, 40, key='ps_colorbar_thickness')
-        with c4:
+        with c3:
             st.checkbox("CB ticks", key='ps_colorbar_ticks')
+        with c4:
+            title_sides = ['right', 'top']
+            st.selectbox("CB title side", title_sides, key='ps_colorbar_title_side')
 
-    if st.session_state.ps_show_colorbar:
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             st.number_input("CB x pos", 0.8, 1.2, step=0.02, key='ps_colorbar_x')
         with c2:
             st.number_input("CB y pos", 0.0, 1.0, step=0.1, key='ps_colorbar_y')
         with c3:
-            title_sides = ['right', 'top']
-            st.selectbox("CB title side", title_sides, key='ps_colorbar_title_side')
-        with c4:
-            st.checkbox("Discrete colors", key='ps_discrete_colors')
+            st.checkbox("Discrete colors", key='ps_discrete_colors', help=DISCRETE_COLORS_HELP)
 
-    if st.session_state.get('ps_show_colorbar', True) and st.session_state.get('ps_discrete_colors', False):
+    if st.session_state.get('ps_discrete_colors', False):
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.slider("Color steps", 3, 20, key='ps_discrete_steps')
+            st.slider("Color steps", 2, 20, key='ps_discrete_steps')  # Min 2
 
-    # Interpolation
-    c1, c2, c3 = st.columns(3)
+    st.markdown("---")
+
+    # ===== Heatmap Settings =====
+    st.markdown("##### Heatmap")
+
     methods = ['linear', 'cubic', 'nearest']
-    with c1:
-        st.checkbox("Interpolate", key='ps_interpolate')
-    if st.session_state.ps_interpolate:
-        with c2:
-            st.slider("Resolution", 10, 100, key='ps_interpolation_resolution')
-        with c3:
-            st.selectbox("Method", methods, key='ps_interpolation_method')
+    marker_modes = ['white', 'fill', 'hide']
 
-    # Margins
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.number_input("Margin Top", 0, 200, step=10, key='ps_margin_top')
-    with c2:
-        st.number_input("Margin Bottom", 0, 200, step=10, key='ps_margin_bottom')
-    with c3:
-        st.number_input("Margin Left", 0, 200, step=10, key='ps_margin_left')
-    with c4:
-        st.number_input("Margin Right", 0, 200, step=10, key='ps_margin_right')
+        st.checkbox("Enable heatmap", key='ps_heatmap_enabled')
+
+    if st.session_state.ps_heatmap_enabled:
+        with c2:
+            st.slider("Resolution", 10, 100, key='ps_heatmap_resolution')
+        with c3:
+            method_help = "\n".join([f"**{m}**: {INTERPOLATION_METHODS[m]}" for m in methods])
+            st.selectbox("Method", methods, key='ps_heatmap_method', help=method_help)
+        with c4:
+            mode_help = "\n".join([f"**{m}**: {HEATMAP_MARKER_MODES[m]}" for m in marker_modes])
+            st.selectbox("Markers", marker_modes, key='ps_heatmap_marker_mode',
+                        format_func=lambda x: {'white': 'White fill', 'fill': 'Color fill', 'hide': 'Hide'}[x],
+                        help=mode_help)
+
+        # Heatmap-specific marker settings
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.slider("HM marker size", 2, 30, key='ps_heatmap_marker_size', help="Marker size for heatmap interpolation layer")
+        with c2:
+            st.slider("HM opacity", 0.1, 1.0, step=0.1, key='ps_heatmap_opacity', help="Opacity for heatmap interpolation layer")
 
 
 def main():
@@ -760,21 +831,26 @@ def main():
             settings = {
                 'fig_width': st.session_state.get('ps_fig_width', 700),
                 'fig_height': st.session_state.get('ps_fig_height', 600),
-                'colorscale': st.session_state.get('ps_colorscale', 'Viridis'),
+                'colorscale': st.session_state.get('ps_colorscale', 'Jet'),
                 'reverse_colorscale': st.session_state.get('ps_reverse_colorscale', False),
                 'auto_z_range': st.session_state.get('ps_auto_z_range', True),
                 'z_min': st.session_state.get('ps_z_min'),
                 'z_max': st.session_state.get('ps_z_max'),
+                'log_scale': st.session_state.get('ps_log_scale', False),
                 'marker_size': st.session_state.get('ps_marker_size', 12),
                 'marker_symbol': st.session_state.get('ps_marker_symbol', 'circle'),
                 'marker_line_width': st.session_state.get('ps_marker_line_width', 1),
                 'marker_line_color': '#000000',
                 'marker_opacity': st.session_state.get('ps_marker_opacity', 0.8),
+                'use_single_color': st.session_state.get('ps_use_single_color', False),
+                'single_color': st.session_state.get('ps_single_color', '#1f77b4'),
                 'axis_line_width': st.session_state.get('ps_axis_line_width', 2),
                 'show_grid': st.session_state.get('ps_show_grid', True),
+                'grid_color': st.session_state.get('ps_grid_color', '#808080'),
+                'grid_line_width': st.session_state.get('ps_grid_line_width', 1),
                 'show_tick_labels': st.session_state.get('ps_show_tick_labels', False),
                 'auto_subscript': st.session_state.get('ps_auto_subscript', True),
-                'axis_font_size': st.session_state.get('ps_axis_font_size', 20),
+                'axis_font_size': st.session_state.get('ps_axis_font_size', 24),
                 'tick_font_size': st.session_state.get('ps_tick_font_size', 14),
                 'tick_step': st.session_state.get('ps_tick_step', 0.1),
                 'show_colorbar': st.session_state.get('ps_show_colorbar', True),
@@ -785,14 +861,17 @@ def main():
                 'colorbar_ticks': st.session_state.get('ps_colorbar_ticks', True),
                 'colorbar_title_side': st.session_state.get('ps_colorbar_title_side', 'right'),
                 'discrete_colors': st.session_state.get('ps_discrete_colors', False),
-                'discrete_steps': st.session_state.get('ps_discrete_steps', 10),
-                'interpolate': st.session_state.get('ps_interpolate', False),
-                'interpolation_resolution': st.session_state.get('ps_interpolation_resolution', 50),
-                'interpolation_method': st.session_state.get('ps_interpolation_method', 'linear'),
+                'discrete_steps': st.session_state.get('ps_discrete_steps', 5),
+                'heatmap_enabled': st.session_state.get('ps_heatmap_enabled', False),
+                'heatmap_resolution': st.session_state.get('ps_heatmap_resolution', 50),
+                'heatmap_method': st.session_state.get('ps_heatmap_method', 'linear'),
+                'heatmap_marker_mode': st.session_state.get('ps_heatmap_marker_mode', 'white'),
+                'heatmap_marker_size': st.session_state.get('ps_heatmap_marker_size', 8),
+                'heatmap_opacity': st.session_state.get('ps_heatmap_opacity', 0.6),
                 'margin_top': st.session_state.get('ps_margin_top', 40),
                 'margin_bottom': st.session_state.get('ps_margin_bottom', 60),
-                'margin_left': st.session_state.get('ps_margin_left', 40),
-                'margin_right': st.session_state.get('ps_margin_right', 40),
+                'margin_left': st.session_state.get('ps_margin_left', 60),
+                'margin_right': st.session_state.get('ps_margin_right', 60),
                 'bgcolor': 'white',
                 'colorbar_title': '',
             }
