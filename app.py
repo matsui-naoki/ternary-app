@@ -7,6 +7,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.colors as pc
 from plotly.subplots import make_subplots
 from typing import Dict
 from scipy.interpolate import griddata
@@ -159,7 +160,6 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
     reverse_colorscale = settings.get('reverse_colorscale', False)
 
     # Build colorscale - always start with the base colorscale name
-    import plotly.colors as pc
     colorscale = colorscale_name
 
     # Create discrete colorscale if enabled
