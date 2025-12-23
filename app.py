@@ -57,7 +57,8 @@ def initialize_session_state():
             'A': pd.Series(dtype='float64'),
             'B': pd.Series(dtype='float64'),
             'C': pd.Series(dtype='float64'),
-            'Z': pd.Series(dtype='float64')
+            'Z': pd.Series(dtype='float64'),
+            'Name': pd.Series(dtype='str')
         })
 
     if 'labels' not in st.session_state:
@@ -165,6 +166,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
             c_norm = c_vals / total
 
             z_vals = valid_data['Z'].values if 'Z' in valid_data.columns else None
+            name_vals = valid_data['Name'].values if 'Name' in valid_data.columns else None
 
             # Apply log scale if enabled
             if settings.get('log_scale', False) and z_vals is not None:
@@ -281,10 +283,21 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                     opacity=settings.get('marker_opacity', 0.8),
                 )
 
+                # Helper function to build hover text with optional Name
+                def build_hover_text(a, b, c, z=None, name=None):
+                    text = f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
+                    if z is not None and not np.isnan(z):
+                        text += f"<br>{labels['Z']}: {z:.4g}"
+                    if name is not None and pd.notna(name) and str(name).strip():
+                        text += f"<br>Name: {name}"
+                    return text
+
                 if use_single_color:
                     marker_dict['color'] = single_color
-                    hover_text = [f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
-                                  for a, b, c in zip(a_norm, b_norm, c_norm)]
+                    if name_vals is not None:
+                        hover_text = [build_hover_text(a, b, c, name=n) for a, b, c, n in zip(a_norm, b_norm, c_norm, name_vals)]
+                    else:
+                        hover_text = [build_hover_text(a, b, c) for a, b, c in zip(a_norm, b_norm, c_norm)]
                 elif z_vals_plot is not None and len(z_vals_plot) > 0 and not np.all(np.isnan(z_vals_plot)):
                     marker_dict['color'] = z_vals_plot
                     marker_dict['colorscale'] = colorscale
@@ -292,13 +305,16 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                     marker_dict['cmax'] = z_max_plot
                     marker_dict['showscale'] = settings.get('show_colorbar', True)
                     marker_dict['colorbar'] = colorbar_dict
-                    hover_text = [f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}<br>{labels['Z']}: {z:.4g}" if not np.isnan(z) else
-                                  f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
-                                  for a, b, c, z in zip(a_norm, b_norm, c_norm, z_vals)]
+                    if name_vals is not None:
+                        hover_text = [build_hover_text(a, b, c, z, n) for a, b, c, z, n in zip(a_norm, b_norm, c_norm, z_vals, name_vals)]
+                    else:
+                        hover_text = [build_hover_text(a, b, c, z) for a, b, c, z in zip(a_norm, b_norm, c_norm, z_vals)]
                 else:
                     marker_dict['color'] = '#1f77b4'
-                    hover_text = [f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
-                                  for a, b, c in zip(a_norm, b_norm, c_norm)]
+                    if name_vals is not None:
+                        hover_text = [build_hover_text(a, b, c, name=n) for a, b, c, n in zip(a_norm, b_norm, c_norm, name_vals)]
+                    else:
+                        hover_text = [build_hover_text(a, b, c) for a, b, c in zip(a_norm, b_norm, c_norm)]
 
                 fig.add_trace(go.Scatterternary(
                     a=a_norm, b=b_norm, c=c_norm,
@@ -311,11 +327,20 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
 
     tick_step = settings.get('tick_step', 0.1)
 
+    # Get label offsets (converted to standoff in pixels, base 15 + offset*100)
+    label_offset_a = settings.get('label_offset_a', 0.0)
+    label_offset_b = settings.get('label_offset_b', 0.0)
+    label_offset_c = settings.get('label_offset_c', 0.0)
+    base_standoff = 15
+    standoff_a = max(0, base_standoff + int(label_offset_a * 100))
+    standoff_b = max(0, base_standoff + int(label_offset_b * 100))
+    standoff_c = max(0, base_standoff + int(label_offset_c * 100))
+
     fig.update_layout(
         ternary=dict(
             sum=1,
             aaxis=dict(
-                title=dict(text=a_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color)),
+                title=dict(text=a_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color), standoff=standoff_a),
                 tickfont=dict(size=settings.get('tick_font_size', 14), family=font_family, color=font_color),
                 linewidth=settings.get('axis_line_width', 2),
                 linecolor='black',
@@ -326,7 +351,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                 ticks='outside' if settings.get('show_tick_labels', False) else '',
             ),
             baxis=dict(
-                title=dict(text=b_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color)),
+                title=dict(text=b_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color), standoff=standoff_b),
                 tickfont=dict(size=settings.get('tick_font_size', 14), family=font_family, color=font_color),
                 linewidth=settings.get('axis_line_width', 2),
                 linecolor='black',
@@ -337,7 +362,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                 ticks='outside' if settings.get('show_tick_labels', False) else '',
             ),
             caxis=dict(
-                title=dict(text=c_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color)),
+                title=dict(text=c_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color), standoff=standoff_c),
                 tickfont=dict(size=settings.get('tick_font_size', 14), family=font_family, color=font_color),
                 linewidth=settings.get('axis_line_width', 2),
                 linecolor='black',
@@ -402,17 +427,27 @@ def render_data_loader():
             df = st.session_state.loaded_file_data['df']
             headers = st.session_state.loaded_file_data['headers']
             available_cols = list(df.columns)
+            n_cols = len(available_cols)
 
-            c1, c2, c3, c4 = st.columns(4)
+            # Auto-detect column mapping based on number of columns
+            # 3 cols: ABC, 4 cols: ABCZ, 5+ cols: ABCZName
+            c1, c2, c3, c4, c5 = st.columns(5)
             with c1:
                 a_col = st.selectbox("A", options=available_cols, index=0, key='a_col_select')
             with c2:
-                b_col = st.selectbox("B", options=available_cols, index=min(1, len(available_cols)-1), key='b_col_select')
+                b_col = st.selectbox("B", options=available_cols, index=min(1, n_cols-1), key='b_col_select')
             with c3:
-                c_col = st.selectbox("C", options=available_cols, index=min(2, len(available_cols)-1), key='c_col_select')
+                c_col = st.selectbox("C", options=available_cols, index=min(2, n_cols-1), key='c_col_select')
             with c4:
                 z_options = ['(None)'] + available_cols
-                z_col = st.selectbox("Z", options=z_options, index=min(4, len(z_options)-1), key='z_col_select')
+                # Default Z index: column 4 if exists, else (None)
+                z_default_idx = min(4, len(z_options)-1) if n_cols >= 4 else 0
+                z_col = st.selectbox("Z", options=z_options, index=z_default_idx, key='z_col_select')
+            with c5:
+                name_options = ['(None)'] + available_cols
+                # Default Name index: column 5 if exists, else (None)
+                name_default_idx = min(5, len(name_options)-1) if n_cols >= 5 else 0
+                name_col = st.selectbox("Name", options=name_options, index=name_default_idx, key='name_col_select')
 
             use_headers = headers and st.checkbox("Use headers as labels", value=True, key='use_headers')
 
@@ -422,6 +457,7 @@ def render_data_loader():
                 new_data['B'] = pd.to_numeric(df[b_col], errors='coerce')
                 new_data['C'] = pd.to_numeric(df[c_col], errors='coerce')
                 new_data['Z'] = pd.to_numeric(df[z_col], errors='coerce') if z_col != '(None)' else np.nan
+                new_data['Name'] = df[name_col].astype(str) if name_col != '(None)' else ''
 
                 if use_headers:
                     if not str(a_col).isdigit():
@@ -539,6 +575,7 @@ def render_data_table():
             "B": st.column_config.NumberColumn(st.session_state.labels.get('B', 'B'), min_value=0, format="%.4f"),
             "C": st.column_config.NumberColumn(st.session_state.labels.get('C', 'C'), min_value=0, format="%.4f"),
             "Z": st.column_config.NumberColumn(st.session_state.labels.get('Z', 'Z'), format="%.4g"),
+            "Name": st.column_config.TextColumn("Name"),
             "SUM": st.column_config.TextColumn("Formula", disabled=True),
         },
         num_rows="dynamic",
@@ -555,10 +592,11 @@ def render_data_table():
 
     c1, c2 = st.columns([1, 3])
     with c1:
-        if st.button("Clear", key='clear_btn'):
+        if st.button("Clear", key='clear_btn', help="Clear all data from the table"):
             st.session_state.data = pd.DataFrame({
                 'A': pd.Series(dtype='float64'), 'B': pd.Series(dtype='float64'),
-                'C': pd.Series(dtype='float64'), 'Z': pd.Series(dtype='float64')
+                'C': pd.Series(dtype='float64'), 'Z': pd.Series(dtype='float64'),
+                'Name': pd.Series(dtype='str')
             })
             st.session_state.data_version += 1
             st.rerun()
@@ -567,13 +605,15 @@ def render_data_table():
     if PYMATGEN_AVAILABLE and SYMPY_AVAILABLE:
         st.markdown("##### Composition Factorizer")
         st.caption(f"Input formula to factorize into {st.session_state.labels['A']}, {st.session_state.labels['B']}, {st.session_state.labels['C']}")
-        c1, c2, c3 = st.columns([2, 1, 1])
+        c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
         with c1:
-            formula_input = st.text_input("Formula", key='factorize_input', placeholder="e.g., Li3PS4")
+            formula_input = st.text_input("Formula", key='factorize_input', placeholder="e.g., Li3PS4", help="Chemical formula to factorize")
         with c2:
-            z_value = st.number_input("Z value", key='factorize_z', value=0.0)
+            z_value = st.number_input("Z value", key='factorize_z', value=0.0, help="Value for Z column")
         with c3:
-            if st.button("Add", key='factorize_btn', type="primary"):
+            name_value = st.text_input("Name", key='factorize_name', placeholder="Sample name", help="Optional sample name")
+        with c4:
+            if st.button("Add", key='factorize_btn', type="primary", help="Add factorized composition to data"):
                 if formula_input:
                     basis = [st.session_state.labels['A'], st.session_state.labels['B'], st.session_state.labels['C']]
                     result = factorize_composition(formula_input, basis)
@@ -584,7 +624,8 @@ def render_data_table():
                                 'A': [result.get(basis[0], 0) / total],
                                 'B': [result.get(basis[1], 0) / total],
                                 'C': [result.get(basis[2], 0) / total],
-                                'Z': [z_value]
+                                'Z': [z_value],
+                                'Name': [name_value]
                             })
                             st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
                             st.session_state.data_version += 1
@@ -632,15 +673,19 @@ def render_plot_settings():
         'ps_discrete_colors': False,
         'ps_discrete_steps': 5,  # Default 5
         'ps_heatmap_enabled': False,
-        'ps_heatmap_resolution': 50,
+        'ps_heatmap_resolution': 100,
         'ps_heatmap_method': 'linear',
-        'ps_heatmap_marker_mode': 'white',
-        'ps_heatmap_marker_size': 8,
-        'ps_heatmap_opacity': 0.6,
+        'ps_heatmap_marker_mode': 'fill',
+        'ps_heatmap_marker_size': 10,
+        'ps_heatmap_opacity': 1.0,
         'ps_margin_top': 40,
         'ps_margin_bottom': 60,
         'ps_margin_left': 60,  # Default 60
         'ps_margin_right': 60,  # Default 60
+        # Endmember label offset settings
+        'ps_label_offset_a': 0.0,
+        'ps_label_offset_b': 0.0,
+        'ps_label_offset_c': 0.0,
     }
 
     for key, default in widget_defaults.items():
@@ -652,23 +697,33 @@ def render_plot_settings():
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.number_input("Width", 400, 1500, step=50, key='ps_fig_width')
+        st.number_input("Width", 400, 1500, step=50, key='ps_fig_width', help="Figure width in pixels")
     with c2:
-        st.number_input("Height", 400, 1500, step=50, key='ps_fig_height')
+        st.number_input("Height", 400, 1500, step=50, key='ps_fig_height', help="Figure height in pixels")
     with c3:
-        st.number_input("Axis font", 8, 40, key='ps_axis_font_size')
+        st.number_input("Axis font", 8, 40, key='ps_axis_font_size', help="Font size for axis labels (A, B, C)")
     with c4:
-        st.number_input("Tick font", 8, 30, key='ps_tick_font_size')
+        st.number_input("Tick font", 8, 30, key='ps_tick_font_size', help="Font size for tick labels")
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.slider("Axis width", 1, 5, key='ps_axis_line_width')
+        st.slider("Axis width", 1, 5, key='ps_axis_line_width', help="Line width of triangle axes")
     with c2:
-        st.checkbox("Grid", key='ps_show_grid')
+        st.checkbox("Grid", key='ps_show_grid', help="Show grid lines inside triangle")
     with c3:
-        st.checkbox("Ticks", key='ps_show_tick_labels')
+        st.checkbox("Ticks", key='ps_show_tick_labels', help="Show tick labels on axes")
     with c4:
-        st.checkbox("Subscript", key='ps_auto_subscript')
+        st.checkbox("Subscript", key='ps_auto_subscript', help="Auto-convert numbers to subscript in labels")
+
+    # Label offset settings
+    st.markdown("**Label Offset** (adjust endmember label positions)")
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.number_input("A offset", -0.2, 0.2, step=0.02, key='ps_label_offset_a', help="Offset for A label position")
+    with c2:
+        st.number_input("B offset", -0.2, 0.2, step=0.02, key='ps_label_offset_b', help="Offset for B label position")
+    with c3:
+        st.number_input("C offset", -0.2, 0.2, step=0.02, key='ps_label_offset_c', help="Offset for C label position")
 
     if st.session_state.ps_show_grid:
         c1, c2, c3, c4 = st.columns(4)
@@ -874,6 +929,10 @@ def main():
                 'margin_right': st.session_state.get('ps_margin_right', 60),
                 'bgcolor': 'white',
                 'colorbar_title': '',
+                # Label offset settings
+                'label_offset_a': st.session_state.get('ps_label_offset_a', 0.0),
+                'label_offset_b': st.session_state.get('ps_label_offset_b', 0.0),
+                'label_offset_c': st.session_state.get('ps_label_offset_c', 0.0),
             }
             fig = create_ternary_plot(st.session_state.data, st.session_state.labels, settings)
             st.plotly_chart(fig, key='ternary_plot')
