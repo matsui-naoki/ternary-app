@@ -1009,13 +1009,13 @@ def main():
             }
             fig = create_ternary_plot(st.session_state.data, st.session_state.labels, settings)
 
-            # Config for SVG export via toolbar camera button
+            # Config for high-quality PNG export via toolbar camera button
             plotly_config = {
                 'toImageButtonOptions': {
-                    'format': 'svg',
+                    'format': 'png',
                     'filename': 'ternary_plot',
-                    'width': settings.get('fig_width', 700),
-                    'height': settings.get('fig_height', 600),
+                    'width': settings.get('fig_width', 700) * 2,
+                    'height': settings.get('fig_height', 600) * 2,
                     'scale': 2
                 },
                 'displayModeBar': True,
@@ -1023,24 +1023,12 @@ def main():
             }
             st.plotly_chart(fig, key='ternary_plot', config=plotly_config)
 
-            c1, c2, c3, c4 = st.columns(4)
+            # Export buttons: HTML and CSV only
+            c1, c2 = st.columns(2)
             with c1:
-                try:
-                    png_data = fig.to_image(format="png", scale=2)
-                    st.download_button("PNG", png_data, "ternary.png", "image/png", key='dl_png')
-                except Exception as e:
-                    st.caption(f"PNG: {e}")
-            with c2:
-                try:
-                    svg_data = fig.to_image(format="svg")
-                    st.download_button("SVG", svg_data, "ternary.svg", "image/svg+xml", key='dl_svg')
-                except Exception as e:
-                    st.caption(f"SVG: {e}")
-            with c3:
-                # HTML export as fallback (always works)
                 html_data = fig.to_html(include_plotlyjs='cdn')
                 st.download_button("HTML", html_data, "ternary.html", "text/html", key='dl_html')
-            with c4:
+            with c2:
                 st.download_button("CSV", st.session_state.data.to_csv(index=False), "data.csv", "text/csv", key='dl_csv')
         else:
             st.info("No data. Load a file or add data manually.")
