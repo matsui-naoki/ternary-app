@@ -108,14 +108,14 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
         z_min = settings.get('z_min', 0)
         z_max = settings.get('z_max', 1)
 
-    colorscale = settings.get('colorscale', 'Jet')
+    colorscale = settings.get('colorscale', 'Turbo')
     if settings.get('reverse_colorscale', False):
         colorscale = colorscale + '_r'
 
     # Create discrete colorscale if enabled
-    if settings.get('discrete_colors', False):
+    if settings.get('discrete_colors', True):
         import plotly.colors as pc
-        n_steps = settings.get('discrete_steps', 5)
+        n_steps = settings.get('discrete_steps', 10)
         try:
             discrete_colorscale = []
             for i in range(n_steps):
