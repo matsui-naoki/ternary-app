@@ -117,7 +117,7 @@ def initialize_session_state():
         'ps_heatmap_resolution': 100,
         'ps_heatmap_method': 'linear',
         'ps_heatmap_marker_mode': 'fill',
-        'ps_heatmap_marker_size': 5,
+        'ps_heatmap_marker_size': 8,
         'ps_heatmap_opacity': 1.0,
         'ps_margin_top': 40,
         'ps_margin_bottom': 60,
@@ -284,7 +284,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                             a=grid_a[valid_mask], b=grid_b[valid_mask], c=grid_c[valid_mask],
                             mode='markers',
                             marker=dict(
-                                size=settings.get('heatmap_marker_size', 5),
+                                size=settings.get('heatmap_marker_size', 8),
                                 color=z_interp[valid_mask],
                                 colorscale=colorscale,
                                 cmin=z_min_plot, cmax=z_max_plot,
@@ -752,7 +752,7 @@ def render_plot_settings():
         'ps_heatmap_resolution': 100,
         'ps_heatmap_method': 'linear',
         'ps_heatmap_marker_mode': 'fill',
-        'ps_heatmap_marker_size': 5,
+        'ps_heatmap_marker_size': 8,
         'ps_heatmap_opacity': 1.0,
         'ps_margin_top': 40,
         'ps_margin_bottom': 60,
@@ -926,7 +926,7 @@ def render_plot_settings():
         # Heatmap-specific marker settings
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.slider("HM marker size", 2, 30, value=st.session_state.get('ps_heatmap_marker_size', 5), key='ps_heatmap_marker_size', help="Marker size for heatmap interpolation layer")
+            st.slider("HM marker size", 2, 30, value=st.session_state.get('ps_heatmap_marker_size', 8), key='ps_heatmap_marker_size', help="Marker size for heatmap interpolation layer")
         with c2:
             st.slider("HM opacity", 0.1, 1.0, value=st.session_state.get('ps_heatmap_opacity', 1.0), step=0.1, key='ps_heatmap_opacity', help="Opacity for heatmap interpolation layer")
 
@@ -987,7 +987,7 @@ def main():
                 'heatmap_resolution': st.session_state.get('ps_heatmap_resolution', 100),
                 'heatmap_method': st.session_state.get('ps_heatmap_method', 'linear'),
                 'heatmap_marker_mode': st.session_state.get('ps_heatmap_marker_mode', 'fill'),
-                'heatmap_marker_size': st.session_state.get('ps_heatmap_marker_size', 5),
+                'heatmap_marker_size': st.session_state.get('ps_heatmap_marker_size', 8),
                 'heatmap_opacity': st.session_state.get('ps_heatmap_opacity', 1.0),
                 'margin_top': st.session_state.get('ps_margin_top', 40),
                 'margin_bottom': st.session_state.get('ps_margin_bottom', 60),
@@ -999,26 +999,24 @@ def main():
             fig = create_ternary_plot(st.session_state.data, st.session_state.labels, settings)
             st.plotly_chart(fig, key='ternary_plot')
 
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
             with c1:
                 try:
                     png_data = fig.to_image(format="png", scale=2)
                     st.download_button("PNG", png_data, "ternary.png", "image/png", key='dl_png')
                 except Exception as e:
-                    if 'kaleido' in str(e).lower():
-                        st.caption("PNG: install kaleido")
-                    else:
-                        st.caption(f"PNG: {e}")
+                    st.caption(f"PNG: {e}")
             with c2:
                 try:
                     svg_data = fig.to_image(format="svg")
                     st.download_button("SVG", svg_data, "ternary.svg", "image/svg+xml", key='dl_svg')
                 except Exception as e:
-                    if 'kaleido' in str(e).lower():
-                        st.caption("SVG: install kaleido")
-                    else:
-                        st.caption(f"SVG: {e}")
+                    st.caption(f"SVG: {e}")
             with c3:
+                # HTML export as fallback (always works)
+                html_data = fig.to_html(include_plotlyjs='cdn')
+                st.download_button("HTML", html_data, "ternary.html", "text/html", key='dl_html')
+            with c4:
                 st.download_button("CSV", st.session_state.data.to_csv(index=False), "data.csv", "text/csv", key='dl_csv')
         else:
             st.info("No data. Load a file or add data manually.")
