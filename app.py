@@ -395,15 +395,30 @@ def render_data_loader():
             label_visibility="collapsed"
         )
     with c2:
-        if st.button("Load Sample", key='load_sample_btn'):
-            st.session_state.data = get_sample_data()
-            st.session_state.labels = {'A': 'Li2S', 'B': 'P2S5', 'C': 'LiI', 'Z': 'σ / mS cm⁻¹'}
-            st.session_state.label_a = 'Li2S'
-            st.session_state.label_b = 'P2S5'
-            st.session_state.label_c = 'LiI'
-            st.session_state.label_z = 'σ / mS cm⁻¹'
-            st.session_state.data_version += 1
-            st.rerun()
+        if st.button("Load Sample", key='load_sample_btn', help="Load sample data from test_data/comp_sigma.csv"):
+            # Load from test_data/comp_sigma.csv
+            import os
+            sample_path = os.path.join(os.path.dirname(__file__), 'test_data', 'comp_sigma.csv')
+            try:
+                sample_df = pd.read_csv(sample_path)
+                new_data = pd.DataFrame()
+                new_data['A'] = sample_df['Li2S']
+                new_data['B'] = sample_df['P2S5']
+                new_data['C'] = sample_df['LiI']
+                new_data['Z'] = sample_df['sigma']
+                new_data['Name'] = ''
+                st.session_state.data = new_data
+                st.session_state.labels = {'A': 'Li2S', 'B': 'P2S5', 'C': 'LiI', 'Z': 'σ / mS cm⁻¹'}
+                st.session_state.label_a = 'Li2S'
+                st.session_state.label_b = 'P2S5'
+                st.session_state.label_c = 'LiI'
+                st.session_state.label_z = 'σ / mS cm⁻¹'
+                # Enable heatmap since Z values exist
+                st.session_state.ps_heatmap_enabled = True
+                st.session_state.data_version += 1
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error loading sample data: {e}")
 
     if uploaded_file is not None:
         if st.session_state.uploaded_file_name != uploaded_file.name:
@@ -466,6 +481,9 @@ def render_data_loader():
                         st.session_state.z_label_preset = 'custom'
 
                 st.session_state.data = new_data
+                # Enable heatmap if Z values exist
+                if z_col != '(None)' and new_data['Z'].notna().any():
+                    st.session_state.ps_heatmap_enabled = True
                 st.session_state.data_version += 1
                 st.rerun()
 
