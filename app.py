@@ -618,9 +618,9 @@ def render_data_table():
         with c1:
             formula_input = st.text_input("Formula", key='factorize_input', placeholder="e.g., Li3PS4", help="Chemical formula to factorize")
         with c2:
-            z_value = st.number_input("Z value", key='factorize_z', value=0.0, help="Value for Z column")
+            z_value_str = st.text_input("Z value", key='factorize_z', placeholder="(optional)", help="Optional value for Z column")
         with c3:
-            name_value = st.text_input("Name", key='factorize_name', placeholder="Sample name", help="Optional sample name")
+            name_value = st.text_input("Name", key='factorize_name', placeholder="(optional)", help="Optional sample name")
         with c4:
             if st.button("Add", key='factorize_btn', type="primary", help="Add factorized composition to data"):
                 if formula_input:
@@ -629,6 +629,11 @@ def render_data_table():
                     if result:
                         total = sum(result.values())
                         if total > 0:
+                            # Parse Z value (optional)
+                            try:
+                                z_value = float(z_value_str) if z_value_str.strip() else np.nan
+                            except ValueError:
+                                z_value = np.nan
                             new_row = pd.DataFrame({
                                 'A': [result.get(basis[0], 0) / total],
                                 'B': [result.get(basis[1], 0) / total],
