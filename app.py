@@ -327,20 +327,11 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
 
     tick_step = settings.get('tick_step', 0.1)
 
-    # Get label offsets (converted to standoff in pixels, base 15 + offset*100)
-    label_offset_a = settings.get('label_offset_a', 0.0)
-    label_offset_b = settings.get('label_offset_b', 0.0)
-    label_offset_c = settings.get('label_offset_c', 0.0)
-    base_standoff = 15
-    standoff_a = max(0, base_standoff + int(label_offset_a * 100))
-    standoff_b = max(0, base_standoff + int(label_offset_b * 100))
-    standoff_c = max(0, base_standoff + int(label_offset_c * 100))
-
     fig.update_layout(
         ternary=dict(
             sum=1,
             aaxis=dict(
-                title=dict(text=a_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color), standoff=standoff_a),
+                title=dict(text=a_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color)),
                 tickfont=dict(size=settings.get('tick_font_size', 14), family=font_family, color=font_color),
                 linewidth=settings.get('axis_line_width', 2),
                 linecolor='black',
@@ -351,7 +342,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                 ticks='outside' if settings.get('show_tick_labels', False) else '',
             ),
             baxis=dict(
-                title=dict(text=b_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color), standoff=standoff_b),
+                title=dict(text=b_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color)),
                 tickfont=dict(size=settings.get('tick_font_size', 14), family=font_family, color=font_color),
                 linewidth=settings.get('axis_line_width', 2),
                 linecolor='black',
@@ -362,7 +353,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                 ticks='outside' if settings.get('show_tick_labels', False) else '',
             ),
             caxis=dict(
-                title=dict(text=c_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color), standoff=standoff_c),
+                title=dict(text=c_label, font=dict(size=settings.get('axis_font_size', 24), family=font_family, color=font_color)),
                 tickfont=dict(size=settings.get('tick_font_size', 14), family=font_family, color=font_color),
                 linewidth=settings.get('axis_line_width', 2),
                 linecolor='black',
@@ -682,10 +673,6 @@ def render_plot_settings():
         'ps_margin_bottom': 60,
         'ps_margin_left': 60,  # Default 60
         'ps_margin_right': 60,  # Default 60
-        # Endmember label offset settings
-        'ps_label_offset_a': 0.0,
-        'ps_label_offset_b': 0.0,
-        'ps_label_offset_c': 0.0,
     }
 
     for key, default in widget_defaults.items():
@@ -714,16 +701,6 @@ def render_plot_settings():
         st.checkbox("Ticks", key='ps_show_tick_labels', help="Show tick labels on axes")
     with c4:
         st.checkbox("Subscript", key='ps_auto_subscript', help="Auto-convert numbers to subscript in labels")
-
-    # Label offset settings
-    st.markdown("**Label Offset** (adjust endmember label positions)")
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.number_input("A offset", -0.2, 0.2, step=0.02, key='ps_label_offset_a', help="Offset for A label position")
-    with c2:
-        st.number_input("B offset", -0.2, 0.2, step=0.02, key='ps_label_offset_b', help="Offset for B label position")
-    with c3:
-        st.number_input("C offset", -0.2, 0.2, step=0.02, key='ps_label_offset_c', help="Offset for C label position")
 
     if st.session_state.ps_show_grid:
         c1, c2, c3, c4 = st.columns(4)
@@ -929,10 +906,6 @@ def main():
                 'margin_right': st.session_state.get('ps_margin_right', 60),
                 'bgcolor': 'white',
                 'colorbar_title': '',
-                # Label offset settings
-                'label_offset_a': st.session_state.get('ps_label_offset_a', 0.0),
-                'label_offset_b': st.session_state.get('ps_label_offset_b', 0.0),
-                'label_offset_c': st.session_state.get('ps_label_offset_c', 0.0),
             }
             fig = create_ternary_plot(st.session_state.data, st.session_state.labels, settings)
             st.plotly_chart(fig, key='ternary_plot')
