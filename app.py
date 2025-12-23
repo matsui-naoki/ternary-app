@@ -997,7 +997,20 @@ def main():
                 'colorbar_title': '',
             }
             fig = create_ternary_plot(st.session_state.data, st.session_state.labels, settings)
-            st.plotly_chart(fig, key='ternary_plot')
+
+            # Config for SVG export via toolbar camera button
+            plotly_config = {
+                'toImageButtonOptions': {
+                    'format': 'svg',
+                    'filename': 'ternary_plot',
+                    'width': settings.get('fig_width', 700),
+                    'height': settings.get('fig_height', 600),
+                    'scale': 2
+                },
+                'displayModeBar': True,
+                'displaylogo': False,
+            }
+            st.plotly_chart(fig, key='ternary_plot', config=plotly_config)
 
             c1, c2, c3, c4 = st.columns(4)
             with c1:
