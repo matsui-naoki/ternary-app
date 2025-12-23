@@ -80,6 +80,53 @@ def initialize_session_state():
     if 'data_version' not in st.session_state:
         st.session_state.data_version = 0
 
+    # Initialize widget defaults for plot settings
+    widget_defaults = {
+        'ps_fig_width': 700,
+        'ps_fig_height': 600,
+        'ps_colorscale': 'Turbo',
+        'ps_reverse_colorscale': False,
+        'ps_auto_z_range': True,
+        'ps_log_scale': False,
+        'ps_marker_size': 8,
+        'ps_marker_symbol': 'circle',
+        'ps_marker_line_width': 1,
+        'ps_marker_opacity': 0.8,
+        'ps_use_single_color': False,
+        'ps_single_color': '#1f77b4',
+        'ps_axis_line_width': 2,
+        'ps_show_grid': True,
+        'ps_grid_color': '#808080',
+        'ps_grid_line_width': 1,
+        'ps_show_tick_labels': False,
+        'ps_auto_subscript': True,
+        'ps_axis_font_size': 24,
+        'ps_tick_font_size': 14,
+        'ps_tick_step': 0.1,
+        'ps_show_colorbar': True,
+        'ps_colorbar_len': 0.6,
+        'ps_colorbar_thickness': 20,
+        'ps_colorbar_x': 1.02,
+        'ps_colorbar_y': 0.5,
+        'ps_colorbar_ticks': True,
+        'ps_colorbar_title_side': 'right',
+        'ps_discrete_colors': True,
+        'ps_discrete_steps': 10,
+        'ps_heatmap_enabled': False,
+        'ps_heatmap_resolution': 100,
+        'ps_heatmap_method': 'linear',
+        'ps_heatmap_marker_mode': 'fill',
+        'ps_heatmap_marker_size': 5,
+        'ps_heatmap_opacity': 1.0,
+        'ps_margin_top': 40,
+        'ps_margin_bottom': 60,
+        'ps_margin_left': 60,
+        'ps_margin_right': 60,
+    }
+    for key, default in widget_defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = default
+
 
 def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Dict) -> go.Figure:
     """Create ternary plot with given data and settings."""
@@ -222,7 +269,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                             a=grid_a[valid_mask], b=grid_b[valid_mask], c=grid_c[valid_mask],
                             mode='markers',
                             marker=dict(
-                                size=settings.get('heatmap_marker_size', 10),
+                                size=settings.get('heatmap_marker_size', 5),
                                 color=z_interp[valid_mask],
                                 colorscale=colorscale,
                                 cmin=z_min_plot, cmax=z_max_plot,
@@ -242,7 +289,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                             if heatmap_marker_mode == 'fill':
                                 # Color-filled markers
                                 marker_dict = dict(
-                                    size=settings.get('marker_size', 12) + 2,
+                                    size=settings.get('marker_size', 8) + 2,
                                     color=z_vals_plot,
                                     colorscale=colorscale,
                                     cmin=z_min_plot, cmax=z_max_plot,
@@ -251,7 +298,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                                 )
                             else:  # white
                                 marker_dict = dict(
-                                    size=settings.get('marker_size', 12) + 2,
+                                    size=settings.get('marker_size', 8) + 2,
                                     color='white',
                                     line=dict(color=settings.get('marker_line_color', '#000000'), width=settings.get('marker_line_width', 1)),
                                 )
@@ -277,7 +324,7 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                 single_color = settings.get('single_color', '#1f77b4')
 
                 marker_dict = dict(
-                    size=settings.get('marker_size', 12),
+                    size=settings.get('marker_size', 8),
                     symbol=settings.get('marker_symbol', 'circle'),
                     line=dict(color=settings.get('marker_line_color', '#000000'), width=settings.get('marker_line_width', 1)),
                     opacity=settings.get('marker_opacity', 0.8),
@@ -662,7 +709,7 @@ def render_plot_settings():
         'ps_reverse_colorscale': False,
         'ps_auto_z_range': True,
         'ps_log_scale': False,
-        'ps_marker_size': 12,
+        'ps_marker_size': 8,
         'ps_marker_symbol': 'circle',
         'ps_marker_line_width': 1,
         'ps_marker_opacity': 0.8,
@@ -690,7 +737,7 @@ def render_plot_settings():
         'ps_heatmap_resolution': 100,
         'ps_heatmap_method': 'linear',
         'ps_heatmap_marker_mode': 'fill',
-        'ps_heatmap_marker_size': 10,
+        'ps_heatmap_marker_size': 5,
         'ps_heatmap_opacity': 1.0,
         'ps_margin_top': 40,
         'ps_margin_bottom': 60,
@@ -728,23 +775,23 @@ def render_plot_settings():
     if st.session_state.ps_show_grid:
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.color_picker("Grid color", key='ps_grid_color')
+            st.color_picker("Grid color", key='ps_grid_color', help="Color of grid lines")
         with c2:
-            st.slider("Grid width", 1, 5, key='ps_grid_line_width')
+            st.slider("Grid width", 1, 5, key='ps_grid_line_width', help="Line width of grid")
         with c3:
             tick_options = [0.05, 0.1, 0.2, 0.25, 0.5]
-            st.selectbox("Tick step", tick_options, key='ps_tick_step')
+            st.selectbox("Tick step", tick_options, key='ps_tick_step', help="Spacing between grid lines")
 
     # Margins
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.number_input("Margin Top", 0, 200, step=10, key='ps_margin_top')
+        st.number_input("Margin Top", 0, 200, step=10, key='ps_margin_top', help="Top margin in pixels")
     with c2:
-        st.number_input("Margin Bottom", 0, 200, step=10, key='ps_margin_bottom')
+        st.number_input("Margin Bottom", 0, 200, step=10, key='ps_margin_bottom', help="Bottom margin in pixels")
     with c3:
-        st.number_input("Margin Left", 0, 200, step=10, key='ps_margin_left')
+        st.number_input("Margin Left", 0, 200, step=10, key='ps_margin_left', help="Left margin in pixels")
     with c4:
-        st.number_input("Margin Right", 0, 200, step=10, key='ps_margin_right')
+        st.number_input("Margin Right", 0, 200, step=10, key='ps_margin_right', help="Right margin in pixels")
 
     st.markdown("---")
 
@@ -754,13 +801,13 @@ def render_plot_settings():
     symbols = ['circle', 'square', 'diamond', 'triangle-up', 'hexagon', 'star']
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.slider("Marker size", 2, 30, key='ps_marker_size')
+        st.slider("Marker size", 2, 30, key='ps_marker_size', help="Size of data point markers")
     with c2:
-        st.selectbox("Symbol", symbols, key='ps_marker_symbol')
+        st.selectbox("Symbol", symbols, key='ps_marker_symbol', help="Shape of data point markers")
     with c3:
-        st.slider("Edge width", 0, 5, key='ps_marker_line_width')
+        st.slider("Edge width", 0, 5, key='ps_marker_line_width', help="Width of marker edge/outline")
     with c4:
-        st.slider("Opacity", 0.0, 1.0, step=0.1, key='ps_marker_opacity')
+        st.slider("Opacity", 0.0, 1.0, step=0.1, key='ps_marker_opacity', help="Transparency of markers (1.0 = opaque)")
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -777,18 +824,18 @@ def render_plot_settings():
     colorscales = ['Turbo', 'Jet', 'Viridis', 'Plasma', 'Inferno', 'Magma', 'Hot', 'RdBu', 'RdYlBu', 'Blues', 'Reds']
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.selectbox("Colorscale", colorscales, key='ps_colorscale')
+        st.selectbox("Colorscale", colorscales, key='ps_colorscale', help="Color palette for Z-value mapping")
     with c2:
-        st.checkbox("Reverse", key='ps_reverse_colorscale')
+        st.checkbox("Reverse", key='ps_reverse_colorscale', help="Reverse the colorscale direction")
     with c3:
         st.checkbox("Log scale", key='ps_log_scale', help=LOG_SCALE_HELP)
     with c4:
-        st.checkbox("Colorbar", key='ps_show_colorbar')
+        st.checkbox("Colorbar", key='ps_show_colorbar', help="Show colorbar legend for Z-values")
 
     # Z Range
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.checkbox("Auto Z", key='ps_auto_z_range')
+        st.checkbox("Auto Z", key='ps_auto_z_range', help="Automatically calculate Z range from data")
     if not st.session_state.ps_auto_z_range:
         data = st.session_state.data
         if 'Z' in data.columns and len(data) > 0 and data['Z'].notna().any():
@@ -811,27 +858,27 @@ def render_plot_settings():
     if st.session_state.ps_show_colorbar:
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.slider("CB length", 0.2, 1.0, step=0.1, key='ps_colorbar_len')
+            st.slider("CB length", 0.2, 1.0, step=0.1, key='ps_colorbar_len', help="Length of colorbar (fraction of plot)")
         with c2:
-            st.slider("CB thickness", 10, 40, key='ps_colorbar_thickness')
+            st.slider("CB thickness", 10, 40, key='ps_colorbar_thickness', help="Thickness of colorbar in pixels")
         with c3:
-            st.checkbox("CB ticks", key='ps_colorbar_ticks')
+            st.checkbox("CB ticks", key='ps_colorbar_ticks', help="Show tick marks on colorbar")
         with c4:
             title_sides = ['right', 'top']
-            st.selectbox("CB title side", title_sides, key='ps_colorbar_title_side')
+            st.selectbox("CB title side", title_sides, key='ps_colorbar_title_side', help="Position of colorbar title")
 
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.number_input("CB x pos", 0.8, 1.2, step=0.02, key='ps_colorbar_x')
+            st.number_input("CB x pos", 0.8, 1.2, step=0.02, key='ps_colorbar_x', help="Horizontal position of colorbar")
         with c2:
-            st.number_input("CB y pos", 0.0, 1.0, step=0.1, key='ps_colorbar_y')
+            st.number_input("CB y pos", 0.0, 1.0, step=0.1, key='ps_colorbar_y', help="Vertical position of colorbar")
         with c3:
             st.checkbox("Discrete colors", key='ps_discrete_colors', help=DISCRETE_COLORS_HELP)
 
     if st.session_state.get('ps_discrete_colors', False):
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.slider("Color steps", 2, 20, key='ps_discrete_steps')  # Min 2
+            st.slider("Color steps", 2, 20, key='ps_discrete_steps', help="Number of discrete color bands")
 
     st.markdown("---")
 
@@ -843,11 +890,11 @@ def render_plot_settings():
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.checkbox("Enable heatmap", key='ps_heatmap_enabled')
+        st.checkbox("Enable heatmap", key='ps_heatmap_enabled', help="Enable heatmap interpolation for Z-values")
 
     if st.session_state.ps_heatmap_enabled:
         with c2:
-            st.slider("Resolution", 10, 100, key='ps_heatmap_resolution')
+            st.slider("Resolution", 10, 100, key='ps_heatmap_resolution', help="Number of grid points for interpolation (higher = smoother)")
         with c3:
             method_help = "\n".join([f"**{m}**: {INTERPOLATION_METHODS[m]}" for m in methods])
             st.selectbox("Method", methods, key='ps_heatmap_method', help=method_help)
@@ -892,7 +939,7 @@ def main():
                 'z_min': st.session_state.get('ps_z_min'),
                 'z_max': st.session_state.get('ps_z_max'),
                 'log_scale': st.session_state.get('ps_log_scale', False),
-                'marker_size': st.session_state.get('ps_marker_size', 12),
+                'marker_size': st.session_state.get('ps_marker_size', 8),
                 'marker_symbol': st.session_state.get('ps_marker_symbol', 'circle'),
                 'marker_line_width': st.session_state.get('ps_marker_line_width', 1),
                 'marker_line_color': '#000000',
@@ -921,7 +968,7 @@ def main():
                 'heatmap_resolution': st.session_state.get('ps_heatmap_resolution', 100),
                 'heatmap_method': st.session_state.get('ps_heatmap_method', 'linear'),
                 'heatmap_marker_mode': st.session_state.get('ps_heatmap_marker_mode', 'fill'),
-                'heatmap_marker_size': st.session_state.get('ps_heatmap_marker_size', 10),
+                'heatmap_marker_size': st.session_state.get('ps_heatmap_marker_size', 5),
                 'heatmap_opacity': st.session_state.get('ps_heatmap_opacity', 1.0),
                 'margin_top': st.session_state.get('ps_margin_top', 40),
                 'margin_bottom': st.session_state.get('ps_margin_bottom', 60),
@@ -936,14 +983,22 @@ def main():
             c1, c2, c3 = st.columns(3)
             with c1:
                 try:
-                    st.download_button("PNG", fig.to_image(format="png", scale=2), "ternary.png", "image/png", key='dl_png')
-                except Exception:
-                    st.caption("PNG: install kaleido")
+                    png_data = fig.to_image(format="png", scale=2)
+                    st.download_button("PNG", png_data, "ternary.png", "image/png", key='dl_png')
+                except Exception as e:
+                    if 'kaleido' in str(e).lower():
+                        st.caption("PNG: install kaleido")
+                    else:
+                        st.caption(f"PNG: {e}")
             with c2:
                 try:
-                    st.download_button("SVG", fig.to_image(format="svg"), "ternary.svg", "image/svg+xml", key='dl_svg')
-                except Exception:
-                    st.caption("SVG: install kaleido")
+                    svg_data = fig.to_image(format="svg")
+                    st.download_button("SVG", svg_data, "ternary.svg", "image/svg+xml", key='dl_svg')
+                except Exception as e:
+                    if 'kaleido' in str(e).lower():
+                        st.caption("SVG: install kaleido")
+                    else:
+                        st.caption(f"SVG: {e}")
             with c3:
                 st.download_button("CSV", st.session_state.data.to_csv(index=False), "data.csv", "text/csv", key='dl_csv')
         else:
