@@ -677,9 +677,14 @@ def render_data_table():
             st.session_state.data_version += 1
             st.rerun()
 
-    # Composition Factorizer
-    if PYMATGEN_AVAILABLE and SYMPY_AVAILABLE:
-        st.markdown("##### Composition Factorizer")
+    # Add Data - Toggle between Manual and Formula input
+    st.markdown("##### Add Data")
+    use_formula = st.toggle("Formula input", value=True if (PYMATGEN_AVAILABLE and SYMPY_AVAILABLE) else False,
+                           disabled=not (PYMATGEN_AVAILABLE and SYMPY_AVAILABLE),
+                           help="Toggle between manual A,B,C input and formula factorization")
+
+    if use_formula and PYMATGEN_AVAILABLE and SYMPY_AVAILABLE:
+        # Formula input mode (Composition Factorizer)
         st.caption(f"Input formula to factorize into {st.session_state.labels['A']}, {st.session_state.labels['B']}, {st.session_state.labels['C']}")
         c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
         with c1:
@@ -715,6 +720,41 @@ def render_data_table():
                             st.error("Factorization result is zero")
                     else:
                         st.error(f"Cannot factorize '{formula_input}' into {basis}")
+    else:
+        # Manual input mode (A, B, C, Z, Name)
+        st.caption("Input A, B, C values directly (will be normalized to sum=1)")
+        c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1, 1, 1, 1])
+        with c1:
+            a_val = st.number_input("A", value=0.0, min_value=0.0, step=0.1, key='manual_a', help=f"Value for {st.session_state.labels['A']}")
+        with c2:
+            b_val = st.number_input("B", value=0.0, min_value=0.0, step=0.1, key='manual_b', help=f"Value for {st.session_state.labels['B']}")
+        with c3:
+            c_val = st.number_input("C", value=0.0, min_value=0.0, step=0.1, key='manual_c', help=f"Value for {st.session_state.labels['C']}")
+        with c4:
+            z_val_str = st.text_input("Z", key='manual_z', placeholder="(optional)", help="Optional value for Z column")
+        with c5:
+            name_val = st.text_input("Name", key='manual_name', placeholder="(optional)", help="Optional sample name")
+        with c6:
+            if st.button("Add", key='manual_add_btn', type="primary", help="Add data point"):
+                total = a_val + b_val + c_val
+                if total > 0:
+                    # Parse Z value (optional)
+                    try:
+                        z_value = float(z_val_str) if z_val_str.strip() else np.nan
+                    except ValueError:
+                        z_value = np.nan
+                    new_row = pd.DataFrame({
+                        'A': [a_val / total],
+                        'B': [b_val / total],
+                        'C': [c_val / total],
+                        'Z': [z_value],
+                        'Name': [name_val]
+                    })
+                    st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
+                    st.session_state.data_version += 1
+                    st.rerun()
+                else:
+                    st.error("A + B + C must be greater than 0")
 
 
 def render_plot_settings():
