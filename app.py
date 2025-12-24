@@ -448,7 +448,7 @@ def render_data_loader():
     """Render data loader section."""
     st.markdown("#### Data Loader")
 
-    c1, c2 = st.columns([3, 1])
+    c1, c2, c3 = st.columns([3, 1, 1])
     with c1:
         uploaded_file = st.file_uploader(
             "Upload CSV/TXT",
@@ -458,6 +458,10 @@ def render_data_loader():
             label_visibility="collapsed"
         )
     with c2:
+        # Export template button
+        template_csv = "A,B,C,Z,Name\n"
+        st.download_button("Template", template_csv, "ternary_template.csv", "text/csv", key='dl_template', help="Download empty CSV template with A,B,C,Z,Name columns")
+    with c3:
         if st.button("Load Sample", key='load_sample_btn', help="Load sample data from test_data/comp_sigma.csv"):
             # Load from test_data/comp_sigma.csv
             import os
