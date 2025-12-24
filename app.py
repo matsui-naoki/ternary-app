@@ -611,8 +611,6 @@ def render_data_labels():
 
 def render_data_table():
     """Render data table section."""
-    st.markdown("#### Data Table")
-
     # Use data_version to force refresh when data changes externally
     data_version = st.session_state.get('data_version', 0)
 
@@ -656,7 +654,7 @@ def render_data_table():
         },
         num_rows="dynamic",
         key=f'data_editor_{data_version}',
-        height=300
+        height=400
     )
 
     if 'SUM' in edited_df.columns:
@@ -665,17 +663,6 @@ def render_data_table():
     # Check if data actually changed to avoid infinite loop
     if not edited_df.equals(st.session_state.data):
         st.session_state.data = edited_df
-
-    c1, c2 = st.columns([1, 3])
-    with c1:
-        if st.button("Clear", key='clear_btn', help="Clear all data from the table"):
-            st.session_state.data = pd.DataFrame({
-                'A': pd.Series(dtype='float64'), 'B': pd.Series(dtype='float64'),
-                'C': pd.Series(dtype='float64'), 'Z': pd.Series(dtype='float64'),
-                'Name': pd.Series(dtype='str')
-            })
-            st.session_state.data_version += 1
-            st.rerun()
 
     # Add Data - Toggle between Manual and Formula input
     st.markdown("##### Add Data")
