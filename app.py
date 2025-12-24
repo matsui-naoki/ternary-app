@@ -324,9 +324,9 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                                 mode='markers',
                                 marker=marker_dict,
                                 hoverinfo='text',
-                                text=[f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}<br>{labels['Z']}: {z:.4g}" if not np.isnan(z) else
-                                      f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
-                                      for a, b, c, z in zip(a_norm, b_norm, c_norm, z_vals)],
+                                text=[f"Index: {i}<br>{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}<br>{labels['Z']}: {z:.4g}" if not np.isnan(z) else
+                                      f"Index: {i}<br>{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
+                                      for i, a, b, c, z in zip(range(len(a_norm)), a_norm, b_norm, c_norm, z_vals)],
                                 showlegend=False
                             ))
                     else:
@@ -346,21 +346,24 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                     opacity=settings.get('marker_opacity', 0.8),
                 )
 
-                # Helper function to build hover text with optional Name
-                def build_hover_text(a, b, c, z=None, name=None):
-                    text = f"{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
+                # Helper function to build hover text with index and optional Name
+                def build_hover_text(idx, a, b, c, z=None, name=None):
+                    text = f"Index: {idx}<br>{labels['A']}: {a:.3f}<br>{labels['B']}: {b:.3f}<br>{labels['C']}: {c:.3f}"
                     if z is not None and not np.isnan(z):
                         text += f"<br>{labels['Z']}: {z:.4g}"
                     if name is not None and pd.notna(name) and str(name).strip():
                         text += f"<br>Name: {name}"
                     return text
 
+                # Create index array
+                indices = list(range(len(a_norm)))
+
                 if use_single_color:
                     marker_dict['color'] = single_color
                     if name_vals is not None:
-                        hover_text = [build_hover_text(a, b, c, name=n) for a, b, c, n in zip(a_norm, b_norm, c_norm, name_vals)]
+                        hover_text = [build_hover_text(i, a, b, c, name=n) for i, a, b, c, n in zip(indices, a_norm, b_norm, c_norm, name_vals)]
                     else:
-                        hover_text = [build_hover_text(a, b, c) for a, b, c in zip(a_norm, b_norm, c_norm)]
+                        hover_text = [build_hover_text(i, a, b, c) for i, a, b, c in zip(indices, a_norm, b_norm, c_norm)]
                 elif z_vals_plot is not None and len(z_vals_plot) > 0 and not np.all(np.isnan(z_vals_plot)):
                     marker_dict['color'] = z_vals_plot
                     marker_dict['colorscale'] = colorscale
@@ -369,15 +372,15 @@ def create_ternary_plot(data: pd.DataFrame, labels: Dict[str, str], settings: Di
                     marker_dict['showscale'] = settings.get('show_colorbar', True)
                     marker_dict['colorbar'] = colorbar_dict
                     if name_vals is not None:
-                        hover_text = [build_hover_text(a, b, c, z, n) for a, b, c, z, n in zip(a_norm, b_norm, c_norm, z_vals, name_vals)]
+                        hover_text = [build_hover_text(i, a, b, c, z, n) for i, a, b, c, z, n in zip(indices, a_norm, b_norm, c_norm, z_vals, name_vals)]
                     else:
-                        hover_text = [build_hover_text(a, b, c, z) for a, b, c, z in zip(a_norm, b_norm, c_norm, z_vals)]
+                        hover_text = [build_hover_text(i, a, b, c, z) for i, a, b, c, z in zip(indices, a_norm, b_norm, c_norm, z_vals)]
                 else:
                     marker_dict['color'] = '#1f77b4'
                     if name_vals is not None:
-                        hover_text = [build_hover_text(a, b, c, name=n) for a, b, c, n in zip(a_norm, b_norm, c_norm, name_vals)]
+                        hover_text = [build_hover_text(i, a, b, c, name=n) for i, a, b, c, n in zip(indices, a_norm, b_norm, c_norm, name_vals)]
                     else:
-                        hover_text = [build_hover_text(a, b, c) for a, b, c in zip(a_norm, b_norm, c_norm)]
+                        hover_text = [build_hover_text(i, a, b, c) for i, a, b, c in zip(indices, a_norm, b_norm, c_norm)]
 
                 fig.add_trace(go.Scatterternary(
                     a=a_norm, b=b_norm, c=c_norm,
@@ -641,10 +644,14 @@ def render_data_table():
     else:
         display_df['SUM'] = ""
 
+    # Add index column for display
+    display_df.insert(0, 'Index', range(len(display_df)))
+
     # Use unique key with data_version to force refresh
     edited_df = st.data_editor(
         display_df,
         column_config={
+            "Index": st.column_config.NumberColumn("Index", disabled=True),
             "A": st.column_config.NumberColumn(st.session_state.labels.get('A', 'A'), min_value=0, format="%.4f"),
             "B": st.column_config.NumberColumn(st.session_state.labels.get('B', 'B'), min_value=0, format="%.4f"),
             "C": st.column_config.NumberColumn(st.session_state.labels.get('C', 'C'), min_value=0, format="%.4f"),
@@ -657,8 +664,11 @@ def render_data_table():
         height=400
     )
 
+    # Remove display-only columns before saving
     if 'SUM' in edited_df.columns:
         edited_df = edited_df.drop(columns=['SUM'])
+    if 'Index' in edited_df.columns:
+        edited_df = edited_df.drop(columns=['Index'])
 
     # Check if data actually changed to avoid infinite loop
     if not edited_df.equals(st.session_state.data):
