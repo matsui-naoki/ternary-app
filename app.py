@@ -114,7 +114,7 @@ def initialize_session_state():
         'ps_discrete_colors': True,
         'ps_discrete_steps': 10,
         'ps_heatmap_enabled': False,
-        'ps_heatmap_resolution': 100,
+        'ps_heatmap_resolution': 200,
         'ps_heatmap_method': 'linear',
         'ps_heatmap_marker_mode': 'fill',
         'ps_heatmap_marker_size': 8,
@@ -750,7 +750,7 @@ def render_plot_settings():
         'ps_discrete_colors': True,
         'ps_discrete_steps': 10,
         'ps_heatmap_enabled': False,
-        'ps_heatmap_resolution': 100,
+        'ps_heatmap_resolution': 200,
         'ps_heatmap_method': 'linear',
         'ps_heatmap_marker_mode': 'fill',
         'ps_heatmap_marker_size': 8,
@@ -911,7 +911,7 @@ def render_plot_settings():
 
     if st.session_state.ps_heatmap_enabled:
         with c2:
-            st.slider("Resolution", 10, 500, value=st.session_state.get('ps_heatmap_resolution', 100), key='ps_heatmap_resolution', help="Number of grid points for interpolation (higher = smoother)")
+            st.slider("Resolution", 10, 500, value=st.session_state.get('ps_heatmap_resolution', 200), key='ps_heatmap_resolution', help="Number of grid points for interpolation (higher = smoother)")
         with c3:
             method_help = "\n".join([f"**{m}**: {INTERPOLATION_METHODS[m]}" for m in methods])
             current_method = st.session_state.get('ps_heatmap_method', 'linear')
@@ -994,7 +994,7 @@ def main():
                 'discrete_colors': st.session_state.get('ps_discrete_colors', True),
                 'discrete_steps': st.session_state.get('ps_discrete_steps', 10),
                 'heatmap_enabled': st.session_state.get('ps_heatmap_enabled', False),
-                'heatmap_resolution': st.session_state.get('ps_heatmap_resolution', 100),
+                'heatmap_resolution': st.session_state.get('ps_heatmap_resolution', 200),
                 'heatmap_method': st.session_state.get('ps_heatmap_method', 'linear'),
                 'heatmap_marker_mode': st.session_state.get('ps_heatmap_marker_mode', 'fill'),
                 'heatmap_marker_size': st.session_state.get('ps_heatmap_marker_size', 8),
@@ -1016,7 +1016,7 @@ def main():
                     'filename': 'ternary_plot',
                     'width': settings.get('fig_width', 700),
                     'height': settings.get('fig_height', 600),
-                    'scale': 2
+                    'scale': 4
                 },
                 'displayModeBar': True,
                 'displaylogo': False,
